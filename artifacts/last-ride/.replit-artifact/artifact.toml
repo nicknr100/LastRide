@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/"
+title = "LastRide"
+description = "A bilingual mobile companion for people in Japan who want to enjoy a night out without missing their last train. It finds the nearest station, calculates a leave-by time using walking duration, and helps with alternatives when the last train is missed."
+version = "1.0.0"
+id = "artifacts/last-ride"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 25198
+
+[services.development]
+run = "pnpm --filter @workspace/last-ride run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/last-ride", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/last-ride", "run", "serve" ]
+
+[services.env]
+PORT = "25198"
+BASE_PATH = "/"

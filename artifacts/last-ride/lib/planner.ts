@@ -1,0 +1,214 @@
+/**
+ * "Plan my night": from the user's position, pick the station to leave from and
+ * work out when they must start walking. Shared by the React app and the
+ * headless background-location task so both always agree.
+ */
+import { distanceBetween, findNearbyStations, LocationError, walkingRoute, type Coordinates, type NearbyStation, type StationOption, type WalkingSpeed } from '@/lib/stations';
+import { MINUTE_MS, serviceDayStart } from '@/lib/time';
+import { getLastTrain, type TrainTime } from '@/lib/timetable';
+
+/** Time from the station entrance to the platform (gates, stairs, finding the right line). */
+export const STATION_BUFFER_MINUTES = 3;
+const CANDIDATE_STATIONS = 3;
+/** While tracking, re-plan only after moving this far from the last plan, or once it is this old. */
+const REPLAN_DISTANCE_METERS = 300;
+const REPLAN_AFTER_MS = 10 * MINUTE_MS;
+
+/** Location updates arrive every 150–200 m; most don't change the plan, so skip them to save API calls. */
+export function shouldReplan(previous: NightPlan | null, coordinates: Coordinates, nowMs: number): boolean {
+  if (!previous) return true;
+  return distanceBetween(previous.coordinates, coordinates) >= REPLAN_DISTANCE_METERS || nowMs - previous.computedAt >= REPLAN_AFTER_MS;
+}
+
+/** A farther station must let the user leave at least this much later to be worth a longer walk at night. */
+const FARTHER_STATION_MIN_GAIN_MINUTES = 10;
+
+/** One station the user could head for. */
+export type StationChoice = {
+  station: StationOption;
+  walkingMinutes: number;
+  distanceMeters: number;
+  lastTrain: TrainTime;
+  /** When to start walking, epoch ms. */
+  leaveByMs: number;
+};
+
+export type NightPlan = StationChoice & {
+  coordinates: Coordinates;
+  /** Other nearby stations that also reach home, closest first. */
+  alternatives: StationChoice[];
+  /** The station the app would pick on its own; differs from the plan's while one is pinned. */
+  autoPick: StationChoice;
+  /** True when the user chose this station instead of the automatic pick. */
+  pinned: boolean;
+  computedAt: number;
+};
+
+/**
+ * relaxed/soon: time to spare · now: time to go · hurry: past leave-by with no
+ * margin left, but the train hasn't gone · departed: the last train has left.
+ * The app can't know whether the user boarded, so "departed" never means "missed".
+ */
+export type RideStatus = 'relaxed' | 'soon' | 'now' | 'hurry' | 'departed';
+
+/** Start warning the user this long before leave-by. */
+const SOON_MINUTES = 30;
+
+/*
+ * Hard backups, as Japan clock times, so every stage of the night ends even if
+ * re-planning keeps moving the target (e.g. walking between stations near the
+ * last or first train). Whichever comes first — the real event or the backup — wins.
+ */
+const HOUR_MS = 60 * MINUTE_MS;
+/** "Last train left" by 01:30 at the latest (a few lines run a little past 01:00). */
+const LAST_TRAIN_LEFT_BY = 21.5 * HOUR_MS;
+/** Night-out tracking off by 04:00 at the latest. */
+const TRACKING_OFF_BY = 24 * HOUR_MS;
+/** Move on to the next night by 05:00 at the latest. */
+const NIGHT_OVER_BY = 25 * HOUR_MS;
+/** The "missed it?" check-in goes out this long after the last train has left. */
+const MISSED_CHECK_IN_AFTER_MINUTES = 3;
+
+/** A clock time in the plan's night, as an offset from that service day's 04:00 start. */
+function nightClock(choice: Pick<StationChoice, 'lastTrain'>, offsetMs: number) {
+  return serviceDayStart(choice.lastTrain.departsAt) + offsetMs;
+}
+
+/** When the app treats the last train as gone: its departure, or 01:30 at the latest. */
+export function lastTrainLeftAt(choice: Pick<StationChoice, 'lastTrain'>): number {
+  return Math.min(choice.lastTrain.departsAt, nightClock(choice, LAST_TRAIN_LEFT_BY));
+}
+
+/** When the "missed the last train?" check-in is sent. */
+export function missedCheckInAt(choice: Pick<StationChoice, 'lastTrain'>): number {
+  return lastTrainLeftAt(choice) + MISSED_CHECK_IN_AFTER_MINUTES * MINUTE_MS;
+}
+
+/** Night-out tracking ends right after the check-in (nothing is left to notify), or at 04:00 at the latest. */
+export function trackingEndsAt(choice: Pick<StationChoice, 'lastTrain'>): number {
+  return Math.min(missedCheckInAt(choice) + MINUTE_MS, nightClock(choice, TRACKING_OFF_BY));
+}
+
+/**
+ * 04:00 after tracking was switched on: the backup that ends tracking even when
+ * no plan could be made (no signal, lookups failing).
+ */
+export function trackingHardStopAt(startedAt: number): number {
+  return serviceDayStart(startedAt) + TRACKING_OFF_BY;
+}
+
+export function rideStatus(choice: Pick<StationChoice, 'leaveByMs' | 'lastTrain'>, nowMs: number): RideStatus {
+  if (nowMs >= lastTrainLeftAt(choice)) return 'departed';
+  const minutesLeft = (choice.leaveByMs - nowMs) / MINUTE_MS;
+  if (minutesLeft < -STATION_BUFFER_MINUTES) return 'hurry';
+  if (minutesLeft <= 0) return 'now';
+  if (minutesLeft <= SOON_MINUTES) return 'soon';
+  return 'relaxed';
+}
+
+/**
+ * When a night is over and the app should move on to the next one: once the
+ * first train of the morning has left — never before the service day rolls over
+ * at 04:00 (so a very early first train can't make it re-plan the same night),
+ * and no later than 05:00.
+ */
+export function nightEndsAt(plan: Pick<NightPlan, 'lastTrain'>, firstTrain: TrainTime | null): number {
+  const serviceDayEnd = nightClock(plan, 24 * HOUR_MS);
+  return Math.min(Math.max(serviceDayEnd, firstTrain?.departsAt ?? 0), nightClock(plan, NIGHT_OVER_BY));
+}
+
+export function sameStation(first: StationOption, second: StationOption) {
+  return first.nameJa === second.nameJa;
+}
+
+/**
+ * The automatic pick: the closest station, unless a farther one buys meaningful
+ * extra time (a better line home can beat a shorter walk, but not by a minute or two).
+ */
+function autoPick(options: StationChoice[]): StationChoice {
+  let best = options[0];
+  for (const option of options.slice(1)) {
+    if (option.leaveByMs - best.leaveByMs >= FARTHER_STATION_MIN_GAIN_MINUTES * MINUTE_MS) best = option;
+  }
+  return best;
+}
+
+/** Builds the plan from evaluated stations, honouring a pinned station if it can still get the user home. */
+function assemble(options: StationChoice[], pinned: StationOption | null, coordinates: Coordinates, computedAt: number): NightPlan {
+  const sorted = [...options].sort((first, second) => first.walkingMinutes - second.walkingMinutes);
+  const auto = autoPick(sorted);
+  const pinnedChoice = pinned ? sorted.find((option) => sameStation(option.station, pinned)) : undefined;
+  const chosen = pinnedChoice ?? auto;
+  const { station, walkingMinutes, distanceMeters, lastTrain, leaveByMs } = chosen;
+  return {
+    station,
+    walkingMinutes,
+    distanceMeters,
+    lastTrain,
+    leaveByMs,
+    coordinates,
+    alternatives: sorted.filter((option) => option !== chosen),
+    autoPick: auto,
+    pinned: pinnedChoice !== undefined,
+    computedAt,
+  };
+}
+
+/** Switches an existing plan to `pinned` (or back to the automatic pick with null) without new lookups. */
+export function repick(plan: NightPlan, pinned: StationOption | null): NightPlan {
+  const { station, walkingMinutes, distanceMeters, lastTrain, leaveByMs } = plan;
+  const current: StationChoice = { station, walkingMinutes, distanceMeters, lastTrain, leaveByMs };
+  return assemble([current, ...plan.alternatives], pinned, plan.coordinates, plan.computedAt);
+}
+
+/**
+ * Evaluates the few nearest stations (plus a pinned one, even if the user has
+ * walked away from it) and picks where to leave from. `nightOf` is any moment
+ * in the service day to plan for; it defaults to now, but lets the app keep
+ * planning for tonight while the user waits for the first train after 04:00.
+ */
+export async function planNight(
+  coordinates: Coordinates,
+  home: StationOption,
+  walkingSpeed: WalkingSpeed,
+  nowMs: number,
+  pinned: StationOption | null = null,
+  nightOf: number = nowMs,
+): Promise<NightPlan> {
+  const candidates: NearbyStation[] = await findNearbyStations(coordinates, walkingSpeed, CANDIDATE_STATIONS);
+  if (pinned && !candidates.some((candidate) => sameStation(candidate.station, pinned))) {
+    candidates.push({ station: pinned, straightMeters: distanceBetween(coordinates, pinned) });
+  }
+  let lookupFailed = false;
+  const evaluated = await Promise.all(
+    candidates.map(async ({ station, walk: knownWalk }) => {
+      try {
+        const [walk, lastTrain] = await Promise.all([knownWalk ?? walkingRoute(coordinates, station, walkingSpeed), getLastTrain(station, home, nightOf)]);
+        if (!lastTrain) return null; // no train from this station reaches home
+        const leaveByMs = lastTrain.departsAt - (walk.walkingMinutes + STATION_BUFFER_MINUTES) * MINUTE_MS;
+        return { station, lastTrain, leaveByMs, ...walk };
+      } catch {
+        lookupFailed = true; // one station failing shouldn't sink the whole plan
+        return null;
+      }
+    }),
+  );
+  const options = evaluated.filter((option): option is NonNullable<typeof option> => option !== null);
+  if (options.length === 0) throw new LocationError(lookupFailed ? 'unavailable' : 'no-route');
+  return assemble(options, pinned, coordinates, nowMs);
+}
+
+/** A leave reminder (`minutesBefore` leave-by, 0 = "leave now") or the "missed it?" check-in. */
+export type ReminderPlan = { minutesBefore: number; fireAt: number; missedCheckIn?: true };
+
+/**
+ * One reminder per selected interval, a "leave now" at leave-by itself, and a
+ * "missed it?" check-in just after the last train leaves; past ones are dropped.
+ */
+export function buildReminderPlans(choice: Pick<StationChoice, 'leaveByMs' | 'lastTrain'>, intervals: number[], nowMs: number): ReminderPlan[] {
+  const reminders: ReminderPlan[] = [...new Set([...intervals, 0])]
+    .sort((first, second) => second - first)
+    .map((minutesBefore) => ({ minutesBefore, fireAt: choice.leaveByMs - minutesBefore * MINUTE_MS }));
+  reminders.push({ minutesBefore: 0, fireAt: missedCheckInAt(choice), missedCheckIn: true });
+  return reminders.filter((reminder) => reminder.fireAt > nowMs + 5000);
+}
