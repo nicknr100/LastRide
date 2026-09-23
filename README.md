@@ -1,5 +1,7 @@
 # LastRide
 
+[![CI](https://github.com/nicknr100/LastRide/actions/workflows/ci.yml/badge.svg)](https://github.com/nicknr100/LastRide/actions/workflows/ci.yml)
+
 **LastRide (帰り時) tells people out at night in Japan when they need to start
 walking to catch the last train home — and what to do if they miss it.**
 
