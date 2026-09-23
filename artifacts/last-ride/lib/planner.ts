@@ -3,6 +3,7 @@
  * work out when they must start walking. Shared by the React app and the
  * headless background-location task so both always agree.
  */
+import type { HomeAddress } from '@/lib/settings';
 import { distanceBetween, findNearbyStations, LocationError, walkingRoute, type Coordinates, type NearbyStation, type StationOption, type WalkingSpeed } from '@/lib/stations';
 import { MINUTE_MS, serviceDayStart } from '@/lib/time';
 import { getLastTrain, type TrainTime } from '@/lib/timetable';
@@ -23,7 +24,7 @@ export function shouldReplan(previous: NightPlan | null, coordinates: Coordinate
 /** A farther station must let the user leave at least this much later to be worth a longer walk at night. */
 const FARTHER_STATION_MIN_GAIN_MINUTES = 10;
 
-/** One station the user could head for. */
+/** One station the user could head for, and the train home from it. */
 export type StationChoice = {
   station: StationOption;
   walkingMinutes: number;
@@ -31,7 +32,16 @@ export type StationChoice = {
   lastTrain: TrainTime;
   /** When to start walking, epoch ms. */
   leaveByMs: number;
+  /** Station this train arrives at — the home station unless a home address opened up a better one. */
+  destination: StationOption;
+  /** Walk from that station to the home address, when one is set. */
+  walkHomeMinutes?: number;
+  /** At the user's door, epoch ms — arrival plus that walk. */
+  arriveHomeMs?: number;
 };
+
+/** Arrival stations worth comparing: the saved home station, plus this many near the home address. */
+const DESTINATION_CANDIDATES = 2;
 
 export type NightPlan = StationChoice & {
   coordinates: Coordinates;
@@ -122,6 +132,33 @@ export function sameStation(first: StationOption, second: StationOption) {
 }
 
 /**
+ * Where the night can end. Without a home address that is simply the saved home
+ * station; with one, nearby stations are worth comparing too, since a line that
+ * runs later can be worth a longer walk at the other end.
+ */
+async function destinationOptions(
+  home: StationOption,
+  homeAddress: HomeAddress | null,
+  walkingSpeed: WalkingSpeed,
+): Promise<Array<{ station: StationOption; walkHomeMinutes?: number }>> {
+  if (!homeAddress) return [{ station: home }];
+  const nearHome = await findNearbyStations(homeAddress, walkingSpeed, DESTINATION_CANDIDATES + 1).catch(() => []);
+  const homeWalk = nearHome.find((candidate) => sameStation(candidate.station, home))?.walk;
+  const options = [
+    {
+      station: home,
+      walkHomeMinutes: homeWalk?.walkingMinutes ?? (await walkingRoute(homeAddress, home, walkingSpeed).catch(() => null))?.walkingMinutes,
+    },
+  ];
+  for (const candidate of nearHome) {
+    if (options.length >= DESTINATION_CANDIDATES) break;
+    if (sameStation(candidate.station, home)) continue;
+    options.push({ station: candidate.station, walkHomeMinutes: candidate.walk?.walkingMinutes });
+  }
+  return options;
+}
+
+/**
  * The automatic pick: the closest station, unless a farther one buys meaningful
  * extra time (a better line home can beat a shorter walk, but not by a minute or two).
  */
@@ -139,13 +176,16 @@ function assemble(options: StationChoice[], pinned: StationOption | null, coordi
   const auto = autoPick(sorted);
   const pinnedChoice = pinned ? sorted.find((option) => sameStation(option.station, pinned)) : undefined;
   const chosen = pinnedChoice ?? auto;
-  const { station, walkingMinutes, distanceMeters, lastTrain, leaveByMs } = chosen;
+  const { station, walkingMinutes, distanceMeters, lastTrain, leaveByMs, destination, walkHomeMinutes, arriveHomeMs } = chosen;
   return {
     station,
     walkingMinutes,
     distanceMeters,
     lastTrain,
     leaveByMs,
+    destination,
+    walkHomeMinutes,
+    arriveHomeMs,
     coordinates,
     alternatives: sorted.filter((option) => option !== chosen),
     autoPick: auto,
@@ -156,8 +196,8 @@ function assemble(options: StationChoice[], pinned: StationOption | null, coordi
 
 /** Switches an existing plan to `pinned` (or back to the automatic pick with null) without new lookups. */
 export function repick(plan: NightPlan, pinned: StationOption | null): NightPlan {
-  const { station, walkingMinutes, distanceMeters, lastTrain, leaveByMs } = plan;
-  const current: StationChoice = { station, walkingMinutes, distanceMeters, lastTrain, leaveByMs };
+  const { station, walkingMinutes, distanceMeters, lastTrain, leaveByMs, destination, walkHomeMinutes, arriveHomeMs } = plan;
+  const current: StationChoice = { station, walkingMinutes, distanceMeters, lastTrain, leaveByMs, destination, walkHomeMinutes, arriveHomeMs };
   return assemble([current, ...plan.alternatives], pinned, plan.coordinates, plan.computedAt);
 }
 
@@ -172,9 +212,9 @@ export async function planNight(
   home: StationOption,
   walkingSpeed: WalkingSpeed,
   nowMs: number,
-  pinned: StationOption | null = null,
-  nightOf: number = nowMs,
+  { pinned = null, nightOf = nowMs, homeAddress = null }: { pinned?: StationOption | null; nightOf?: number; homeAddress?: HomeAddress | null } = {},
 ): Promise<NightPlan> {
+  const destinations = await destinationOptions(home, homeAddress, walkingSpeed);
   const candidates: NearbyStation[] = await findNearbyStations(coordinates, walkingSpeed, CANDIDATE_STATIONS);
   if (pinned && !candidates.some((candidate) => sameStation(candidate.station, pinned))) {
     candidates.push({ station: pinned, straightMeters: distanceBetween(coordinates, pinned) });
@@ -183,10 +223,28 @@ export async function planNight(
   const evaluated = await Promise.all(
     candidates.map(async ({ station, walk: knownWalk }) => {
       try {
-        const [walk, lastTrain] = await Promise.all([knownWalk ?? walkingRoute(coordinates, station, walkingSpeed), getLastTrain(station, home, nightOf)]);
-        if (!lastTrain) return null; // no train from this station reaches home
-        const leaveByMs = lastTrain.departsAt - (walk.walkingMinutes + STATION_BUFFER_MINUTES) * MINUTE_MS;
-        return { station, lastTrain, leaveByMs, ...walk };
+        const walk = knownWalk ?? (await walkingRoute(coordinates, station, walkingSpeed));
+        // With a home address there may be more than one station worth arriving at.
+        const legs = await Promise.all(
+          destinations.map(async (destination) => {
+            const lastTrain = await getLastTrain(station, destination.station, nightOf);
+            if (!lastTrain) return null; // no train from here reaches that station
+            return {
+              station,
+              lastTrain,
+              destination: destination.station,
+              walkHomeMinutes: destination.walkHomeMinutes,
+              arriveHomeMs: lastTrain.arrivesAt === undefined ? undefined : lastTrain.arrivesAt + (destination.walkHomeMinutes ?? 0) * MINUTE_MS,
+              leaveByMs: lastTrain.departsAt - (walk.walkingMinutes + STATION_BUFFER_MINUTES) * MINUTE_MS,
+              ...walk,
+            };
+          }),
+        );
+        const usable = legs.filter((leg): leg is NonNullable<typeof leg> => leg !== null);
+        if (usable.length === 0) return null; // no train from this station reaches home
+        // Leaving later wins; arriving home earlier breaks the tie.
+        usable.sort((first, second) => second.leaveByMs - first.leaveByMs || (first.arriveHomeMs ?? Infinity) - (second.arriveHomeMs ?? Infinity));
+        return usable[0];
       } catch {
         lookupFailed = true; // one station failing shouldn't sink the whole plan
         return null;
@@ -205,10 +263,15 @@ export type ReminderPlan = { minutesBefore: number; fireAt: number; missedCheckI
  * One reminder per selected interval, a "leave now" at leave-by itself, and a
  * "missed it?" check-in just after the last train leaves; past ones are dropped.
  */
-export function buildReminderPlans(choice: Pick<StationChoice, 'leaveByMs' | 'lastTrain'>, intervals: number[], nowMs: number): ReminderPlan[] {
+export function buildReminderPlans(
+  choice: Pick<StationChoice, 'leaveByMs' | 'lastTrain'>,
+  intervals: number[],
+  nowMs: number,
+  { missedCheckIn = true }: { missedCheckIn?: boolean } = {},
+): ReminderPlan[] {
   const reminders: ReminderPlan[] = [...new Set([...intervals, 0])]
     .sort((first, second) => second - first)
     .map((minutesBefore) => ({ minutesBefore, fireAt: choice.leaveByMs - minutesBefore * MINUTE_MS }));
-  reminders.push({ minutesBefore: 0, fireAt: missedCheckInAt(choice), missedCheckIn: true });
+  if (missedCheckIn) reminders.push({ minutesBefore: 0, fireAt: missedCheckInAt(choice), missedCheckIn: true });
   return reminders.filter((reminder) => reminder.fireAt > nowMs + 5000);
 }

@@ -14,6 +14,7 @@ const HOSTS = {
   car: "navitime-route-car.p.rapidapi.com",
   walk: "navitime-route-walk.p.rapidapi.com",
   spot: "navitime-spot.p.rapidapi.com",
+  geocoding: "navitime-geocoding.p.rapidapi.com",
 } as const;
 
 /** Walking speed (km/h) for each pace setting; NAVITIME's default is 4.8. */
@@ -34,6 +35,8 @@ export type Station = {
 export type TaxiEstimate = { distanceMeters: number; minutes: number; fareYen: number | null };
 
 export type WalkRoute = { distanceMeters: number; minutes: number };
+
+export type Address = { name: string; postalCode?: string; latitude: number; longitude: number };
 
 async function call<T>(host: string, path: string, params: Record<string, string>): Promise<T> {
   const key = process.env["RAPIDAPI_KEY"];
@@ -239,4 +242,24 @@ export async function walkRoute(
   const route = move?.distance !== undefined && move.time !== undefined ? { distanceMeters: move.distance, minutes: move.time } : null;
   walkCache.set(cacheKey, route);
   return route;
+}
+
+type AddressItem = { name: string; postal_code?: string; coord: { lat: number; lon: number } };
+
+const addressCache = new TtlCache<Address[]>(30 * DAY_MS, "navitime-address");
+
+/** Japanese addresses matching `word`, most relevant first. */
+export async function geocodeAddress(word: string): Promise<Address[]> {
+  const cacheKey = word.trim();
+  const cached = addressCache.get(cacheKey);
+  if (cached) return cached;
+  const body = await call<{ items?: AddressItem[] }>(HOSTS.geocoding, "/address", { word: cacheKey, limit: "8" });
+  const addresses = (body.items ?? []).map((item) => ({
+    name: item.name,
+    postalCode: item.postal_code || undefined,
+    latitude: item.coord.lat,
+    longitude: item.coord.lon,
+  }));
+  addressCache.set(cacheKey, addresses);
+  return addresses;
 }

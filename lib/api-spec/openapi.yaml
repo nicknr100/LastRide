@@ -18,6 +18,8 @@ tags:
     description: Taxi estimates
   - name: walk
     description: Walking routes
+  - name: addresses
+    description: Address search
   - name: places
     description: Places to wait for the first train
   - name: usage
@@ -191,6 +193,28 @@ paths:
           description: No walking route
         "502":
           description: Routing provider unavailable
+  /addresses/search:
+    get:
+      operationId: searchAddresses
+      tags: [addresses]
+      summary: Search Japanese addresses
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Address text in Japanese (or a postal code)
+          schema: { type: string, minLength: 1, maxLength: 60 }
+      responses:
+        "200":
+          description: Matching addresses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Address"
+        "502":
+          description: Address provider unavailable
   /places/nearby:
     get:
       operationId: getNearbyPlaces
@@ -343,6 +367,18 @@ components:
           type: boolean
           description: Present only when opening hours are known
       required: [name, kind, latitude, longitude, distanceMeters]
+    Address:
+      type: object
+      properties:
+        name:
+          type: string
+        postalCode:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+      required: [name, latitude, longitude]
     WalkRoute:
       type: object
       properties:

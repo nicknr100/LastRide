@@ -142,7 +142,7 @@ export default function AlternativesScreen() {
   const {
     language, status, destination, currentTime, nowMs, walkingSpeed,
     firstTrain, firstTrainRoute, minutesUntilFirstTrain,
-    stationName, stationNameJa, userCoordinates, homeStationOption, isLocating, locationError, requestLocation,
+    stationName, stationNameJa, userCoordinates, homeStationOption, homeAddress, isLocating, locationError, requestLocation,
   } = useLastRide();
   const ja = language === 'ja';
   const [stays, setStays] = useState<StayOption[] | null>(null);
@@ -159,6 +159,9 @@ export default function AlternativesScreen() {
   const [retryCount, setRetryCount] = useState(0);
 
   const homeHasCoordinates = !!homeStationOption && (homeStationOption.latitude !== 0 || homeStationOption.longitude !== 0);
+  // A taxi should take you to your door when the app knows it, not just to the station.
+  const taxiTarget = homeAddress ?? (homeHasCoordinates ? homeStationOption : null);
+  const taxiTargetName = homeAddress ? homeAddress.label : homeStationOption?.nameJa ?? '';
 
   // Opened straight from the "missed the last train?" notification, this screen may be
   // the first thing shown, so it asks for a location like the leave screen does.
@@ -191,7 +194,7 @@ export default function AlternativesScreen() {
       });
     if (homeStationOption && homeHasCoordinates) {
       setIsLoadingTaxi(true);
-      fetchTaxiEstimate(userCoordinates, homeStationOption, nowMs)
+      fetchTaxiEstimate(userCoordinates, taxiTarget ?? homeStationOption, nowMs)
         .then((result) => {
           if (token === requestToken.current) setTaxi(result);
         })
@@ -211,7 +214,7 @@ export default function AlternativesScreen() {
       }
     }
     // nowMs is deliberately not a dependency: it ticks constantly and would refetch.
-  }, [userCoordinates, homeStationOption, homeHasCoordinates, walkingSpeed, retryCount]);
+  }, [userCoordinates, homeStationOption, homeHasCoordinates, taxiTarget?.latitude, taxiTarget?.longitude, walkingSpeed, retryCount]);
 
   const station = ja ? stationNameJa : stationName;
   const homeLabel = destination || (ja ? '自宅の駅' : 'your home station');
@@ -462,9 +465,9 @@ export default function AlternativesScreen() {
                 </Text>
               </View>
             </View>
-            {homeStationOption && homeHasCoordinates && (
+            {taxiTarget && (
               <>
-                <Pressable testID="taxi-route" onPress={() => openMaps(homeStationOption.latitude, homeStationOption.longitude, homeStationOption.nameJa, true)} accessibilityRole="button" style={({ pressed }) => [styles.actionButton, { backgroundColor: colors.foreground, opacity: pressed ? 0.85 : 1 }]}>
+                <Pressable testID="taxi-route" onPress={() => openMaps(taxiTarget.latitude, taxiTarget.longitude, taxiTargetName, true)} accessibilityRole="button" style={({ pressed }) => [styles.actionButton, { backgroundColor: colors.foreground, opacity: pressed ? 0.85 : 1 }]}>
                   <Feather name="map" color={colors.card} size={16} />
                   <Text style={[styles.actionText, { color: colors.card }]}>{ja ? '地図でルート' : 'Driving route'}</Text>
                 </Pressable>
@@ -472,7 +475,7 @@ export default function AlternativesScreen() {
                 {!ja && (
                   <View style={[styles.phraseBox, { backgroundColor: colors.secondary }]}>
                     <Text style={[styles.priceNote, { color: colors.secondaryForeground }]}>Show the driver</Text>
-                    <Text selectable style={[styles.phrase, { color: colors.secondaryForeground }]}>{`${homeStationOption.nameJa}駅までお願いします`}</Text>
+                    <Text selectable style={[styles.phrase, { color: colors.secondaryForeground }]}>{homeAddress ? `${homeAddress.label}までお願いします` : `${homeStationOption?.nameJa ?? ''}駅までお願いします`}</Text>
                   </View>
                 )}
               </>

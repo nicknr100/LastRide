@@ -57,6 +57,7 @@ function choice(overrides: Partial<StationChoice> = {}): StationChoice {
     distanceMeters: 640,
     lastTrain: train(LAST_TRAIN),
     leaveByMs: LEAVE_BY,
+    destination: station('Kichijoji', '吉祥寺'),
     ...overrides,
   };
 }

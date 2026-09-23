@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './address';
 export * from './fromLatParameter';
 export * from './fromLonParameter';
 export * from './fromNameParameter';
@@ -20,6 +21,7 @@ export * from './getWalkRouteParams';
 export * from './healthStatus';
 export * from './place';
 export * from './placeKind';
+export * from './searchAddressesParams';
 export * from './searchStationsParams';
 export * from './serviceDateParameter';
 export * from './station';

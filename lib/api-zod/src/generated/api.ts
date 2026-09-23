@@ -181,6 +181,26 @@ export const GetWalkRouteResponse = zod.object({
 
 
 /**
+ * @summary Search Japanese addresses
+ */
+export const searchAddressesQueryQMax = 60;
+
+
+
+export const SearchAddressesQueryParams = zod.object({
+  "q": zod.coerce.string().min(1).max(searchAddressesQueryQMax).describe('Address text in Japanese (or a postal code)')
+})
+
+export const SearchAddressesResponseItem = zod.object({
+  "name": zod.string(),
+  "postalCode": zod.string().optional(),
+  "latitude": zod.number(),
+  "longitude": zod.number()
+})
+export const SearchAddressesResponse = zod.array(SearchAddressesResponseItem)
+
+
+/**
  * Net cafés, karaoke, capsule hotels and hotels within walking distance, nearest first.
  * @summary Places to stay near a point
  */

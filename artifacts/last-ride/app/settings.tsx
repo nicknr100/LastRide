@@ -6,7 +6,7 @@ import { MINUTE_MS } from '@/lib/time';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** A labelled group of rows. */
@@ -69,6 +69,7 @@ export default function SettingsScreen() {
   const {
     language, homeStation, walkingSpeed, setWalkingSpeed, setLanguage,
     reminderIntervals, toggleReminderInterval, notificationsAllowed,
+    missedCheckIn, setMissedCheckIn,
     demoActive, setDemoNow, nowMs, plan, currentTime, leaveBy, triggerTestNotification, resetAll,
   } = useLastRide();
   const ja = language === 'ja';
@@ -109,6 +110,16 @@ export default function SettingsScreen() {
               })}
             </View>
           </View>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <Row title={ja ? '終電後の案内' : 'After the last train'} subtitle={ja ? '乗り遅れたときの選択肢を通知します' : 'A check-in with your other ways home'}>
+            <Switch
+              testID="toggle-missed-check-in"
+              value={missedCheckIn}
+              onValueChange={setMissedCheckIn}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.card}
+            />
+          </Row>
           {notificationsAllowed === false && (
             <Row title={ja ? '通知が許可されていません' : 'Notifications are off'} subtitle={ja ? '端末の設定から許可してください。' : 'Enable them in your device settings.'} destructive />
           )}
@@ -143,6 +154,8 @@ export default function SettingsScreen() {
           <Row testID="test-notification" title={ja ? 'テスト通知を送る' : 'Send test notification'} subtitle={ja ? '通知の見え方を確認します' : 'Check how reminders look'} onPress={() => void triggerTestNotification()}>
             <Feather name="bell" color={colors.mutedForeground} size={18} />
           </Row>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <Row testID="open-privacy" title={ja ? 'プライバシー' : 'Privacy'} subtitle={ja ? '位置情報の扱いについて' : 'How your location is used'} onPress={() => router.push('/privacy')} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <Row
             testID="reset-all"

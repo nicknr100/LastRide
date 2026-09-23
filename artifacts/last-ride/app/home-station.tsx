@@ -1,5 +1,5 @@
 import { RailwayMark, PressableIcon } from '@/components/RideUI';
-import { searchStations, StationOption, useLastRide } from '@/context/LastRideContext';
+import { searchAddresses, searchStations, StationOption, useLastRide, type HomeAddress } from '@/context/LastRideContext';
 import { useColors } from '@/hooks/useColors';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -10,13 +10,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function HomeStationScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { language, homeStationOption, saveHomeStation, resetLanguage } = useLastRide();
+  const { language, homeStationOption, homeAddress, setHomeAddress, saveHomeStation, resetLanguage } = useLastRide();
   const [query, setQuery] = useState(homeStationOption ? (language === 'ja' ? homeStationOption.nameJa : homeStationOption.name) : '');
   const [results, setResults] = useState<StationOption[]>([]);
   const [selected, setSelected] = useState<StationOption | null>(homeStationOption);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState(false);
   const searchToken = useRef(0);
+  const [addressQuery, setAddressQuery] = useState(homeAddress?.label ?? '');
+  const [addressResults, setAddressResults] = useState<HomeAddress[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<HomeAddress | null>(homeAddress);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const addressToken = useRef(0);
   const ja = language === 'ja';
 
   useEffect(() => {
@@ -47,6 +52,31 @@ export default function HomeStationScreen() {
     return () => clearTimeout(timer);
   }, [query, selected, ja]);
 
+  useEffect(() => {
+    const trimmed = addressQuery.trim();
+    const token = ++addressToken.current;
+    if (trimmed.length < 2 || trimmed === selectedAddress?.label) {
+      setAddressResults([]);
+      setIsSearchingAddress(false);
+      return;
+    }
+    setIsSearchingAddress(true);
+    const timer = setTimeout(() => {
+      searchAddresses(trimmed)
+        .then((results) => {
+          if (token !== addressToken.current) return;
+          setAddressResults(results);
+          setIsSearchingAddress(false);
+        })
+        .catch(() => {
+          if (token !== addressToken.current) return;
+          setAddressResults([]);
+          setIsSearchingAddress(false);
+        });
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [addressQuery, selectedAddress]);
+
   const pickStation = (station: StationOption) => {
     setSelected(station);
     setQuery(ja ? station.nameJa : station.name);
@@ -56,6 +86,8 @@ export default function HomeStationScreen() {
   const continueToRide = () => {
     if (!selected) return;
     saveHomeStation(selected);
+    // The address is optional; saving null clears a previously set one.
+    setHomeAddress(selectedAddress);
     router.replace('/ride');
   };
 
@@ -128,6 +160,71 @@ export default function HomeStationScreen() {
           )}
           {selected && <Text style={[styles.helper, { color: colors.mutedForeground }]}>{ja ? `「${selected.nameJa}」を自宅の最寄り駅として保存します。` : `“${selected.name}” will be saved as your home station.`}</Text>}
         </View>
+        <View style={styles.form}>
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, { color: colors.foreground }]}>{ja ? '自宅の住所' : 'Home address'}</Text>
+            <Text style={[styles.optional, { color: colors.mutedForeground }]}>{ja ? '任意' : 'optional'}</Text>
+          </View>
+          <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: selectedAddress ? colors.primary : colors.border }]}>
+            <Feather name="home" color={colors.mutedForeground} size={19} />
+            <TextInput
+              testID="home-address-input"
+              value={addressQuery}
+              onChangeText={(value) => {
+                setAddressQuery(value);
+                setSelectedAddress(null);
+              }}
+              placeholder={ja ? '例：渋谷区道玄坂' : 'e.g. 渋谷区道玄坂'}
+              placeholderTextColor={colors.mutedForeground}
+              style={[styles.input, { color: colors.foreground }]}
+              returnKeyType="search"
+            />
+            {isSearchingAddress ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : selectedAddress ? (
+              <Pressable
+                testID="clear-home-address"
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={ja ? '住所を削除' : 'Clear address'}
+                onPress={() => {
+                  setSelectedAddress(null);
+                  setAddressQuery('');
+                }}
+              >
+                <Feather name="x-circle" color={colors.mutedForeground} size={19} />
+              </Pressable>
+            ) : null}
+          </View>
+          {addressResults.length > 0 && (
+            <View style={[styles.resultBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {addressResults.map((address, index) => (
+                <Pressable
+                  key={`${address.label}-${address.latitude}`}
+                  testID={`address-result-${index}`}
+                  onPress={() => {
+                    setSelectedAddress(address);
+                    setAddressQuery(address.label);
+                    setAddressResults([]);
+                  }}
+                  style={({ pressed }) => [styles.resultRow, { borderTopWidth: index === 0 ? 0 : 1, borderTopColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+                >
+                  <View style={[styles.resultIcon, { backgroundColor: colors.secondary }]}>
+                    <Feather name="home" color={colors.secondaryForeground} size={15} />
+                  </View>
+                  <Text style={[styles.resultTitle, { color: colors.foreground, flex: 1 }]}>{address.label}</Text>
+                  <Feather name="chevron-right" color={colors.mutedForeground} size={17} />
+                </Pressable>
+              ))}
+            </View>
+          )}
+          <Text style={[styles.helper, { color: colors.mutedForeground }]}>
+            {ja
+              ? '住所を入れると、自宅に近いほかの駅も比較し、駅から家までの徒歩時間やタクシー料金も含めて計算します。'
+              : 'With an address, other stations near home are compared too, and the walk home and taxi fare are measured to your door.'}
+          </Text>
+        </View>
+
         <Pressable testID="save-home-station" disabled={!selected} onPress={continueToRide} style={({ pressed }) => [styles.button, { backgroundColor: colors.primary, opacity: !selected ? 0.4 : pressed ? 0.8 : 1 }]}>
           <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>{ja ? 'LastRideをはじめる' : 'Start using LastRide'}</Text>
           <Feather name="arrow-right" color={colors.primaryForeground} size={19} />
@@ -148,6 +245,8 @@ const styles = StyleSheet.create({
   subtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, lineHeight: 22 },
   form: { gap: 9 },
   label: { fontFamily: 'Inter_700Bold', fontSize: 14 },
+  labelRow: { alignItems: 'baseline', flexDirection: 'row', gap: 8 },
+  optional: { fontFamily: 'Inter_400Regular', fontSize: 12 },
   inputWrap: { alignItems: 'center', borderRadius: 18, borderWidth: 1.5, flexDirection: 'row', gap: 11, paddingHorizontal: 15 },
   input: { flex: 1, fontFamily: 'Inter_500Medium', fontSize: 16, minHeight: 58 },
   helper: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 18, paddingHorizontal: 2 },

@@ -80,6 +80,13 @@ export interface Place {
   open24h?: boolean;
 }
 
+export interface Address {
+  name: string;
+  postalCode?: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface WalkRoute {
   distanceMeters: number;
   minutes: number;
@@ -210,6 +217,15 @@ export const GetWalkRoutePace = {
   normal: 'normal',
   fast: 'fast',
 } as const;
+
+export type SearchAddressesParams = {
+/**
+ * Address text in Japanese (or a postal code)
+ * @minLength 1
+ * @maxLength 60
+ */
+q: string;
+};
 
 export type GetNearbyPlacesParams = {
 lat: number;

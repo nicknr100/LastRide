@@ -16,6 +16,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  Address,
   GetFirstTrainParams,
   GetLastTrainParams,
   GetNearbyPlacesParams,
@@ -24,6 +25,7 @@ import type {
   GetWalkRouteParams,
   HealthStatus,
   Place,
+  SearchAddressesParams,
   SearchStationsParams,
   Station,
   TaxiEstimate,
@@ -634,6 +636,90 @@ export function useGetWalkRoute<TData = Awaited<ReturnType<typeof getWalkRoute>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetWalkRouteQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchAddressesUrl = (params: SearchAddressesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/addresses/search?${stringifiedParams}` : `/api/addresses/search`
+}
+
+/**
+ * @summary Search Japanese addresses
+ */
+export const searchAddresses = async (params: SearchAddressesParams, options?: Parameters<typeof customFetch>[1]): Promise<Address[]> => {
+
+  return customFetch<Address[]>(getSearchAddressesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchAddressesQueryKey = (params?: SearchAddressesParams,) => {
+    return [
+    `/api/addresses/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchAddressesQueryOptions = <TData = Awaited<ReturnType<typeof searchAddresses>>, TError = ErrorType<void>>(params: SearchAddressesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchAddresses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchAddressesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchAddresses>>> = ({ signal }) => searchAddresses(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchAddresses>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchAddressesQueryResult = NonNullable<Awaited<ReturnType<typeof searchAddresses>>>
+export type SearchAddressesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Search Japanese addresses
+ */
+
+export function useSearchAddresses<TData = Awaited<ReturnType<typeof searchAddresses>>, TError = ErrorType<void>>(
+ params: SearchAddressesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchAddresses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchAddressesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

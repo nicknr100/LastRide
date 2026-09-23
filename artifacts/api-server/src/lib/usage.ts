@@ -5,7 +5,7 @@
 import { readDataFile, writeDataFileSoon } from "./cache";
 import { logger } from "./logger";
 
-export type Provider = "ekispert" | "navitime-transport" | "navitime-route-car" | "navitime-route-walk" | "navitime-spot";
+export type Provider = "ekispert" | "navitime-transport" | "navitime-route-car" | "navitime-route-walk" | "navitime-spot" | "navitime-geocoding";
 
 /** Free-plan monthly allowances; RapidAPI Basic plans stop at 500 calls a month per API. */
 export const MONTHLY_LIMITS: Partial<Record<Provider, number>> = {
@@ -13,6 +13,7 @@ export const MONTHLY_LIMITS: Partial<Record<Provider, number>> = {
   "navitime-route-car": 500,
   "navitime-route-walk": 500,
   "navitime-spot": 500,
+  "navitime-geocoding": 500,
 };
 
 type Counts = Record<string, number>;

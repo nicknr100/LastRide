@@ -53,11 +53,11 @@ async function recomputeFromLocation(coordinates: Coordinates): Promise<void> {
     return;
   }
   if (!shouldReplan(previous, coordinates, now)) return;
-  const plan = await planNight(coordinates, settings.homeStation, settings.walkingSpeed, now, settings.pinnedStation);
+  const plan = await planNight(coordinates, settings.homeStation, settings.walkingSpeed, now, { pinned: settings.pinnedStation, homeAddress: settings.homeAddress });
   if (!(await isTrackingFlagOn())) return; // stopped while we were computing
   await AsyncStorage.setItem(SNAPSHOT_KEY, JSON.stringify(plan));
   const language = settings.language ?? 'en';
-  await scheduleReminders(buildReminderPlans(plan, settings.reminderIntervals, now), {
+  await scheduleReminders(buildReminderPlans(plan, settings.reminderIntervals, now, { missedCheckIn: settings.missedCheckIn }), {
     leaveBy: formatJstTime(plan.leaveByMs),
     station: language === 'ja' ? plan.station.nameJa : plan.station.name,
     language,

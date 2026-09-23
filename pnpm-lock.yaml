@@ -173,6 +173,9 @@ importers:
       thread-stream:
         specifier: 3.1.0
         version: 3.1.0
+      vitest:
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@25.9.5)(vite@7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
 
   artifacts/last-ride:
     dependencies:
@@ -1134,9 +1137,6 @@ packages:
 
   '@jridgewell/source-map@0.3.11':
     resolution: {integrity: sha512-ZMp1V8ZFcPG5dIWnQLr3NSI1MiCU7UETdS/A0G8V/XWHvJv3ZsFqutJn1Y5RPmAPX6F3BiE397OqveU/9NCuIA==}
-
-  '@jridgewell/sourcemap-codec@1.5.5':
-    resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
@@ -3786,10 +3786,6 @@ packages:
     resolution: {integrity: sha512-cfDHL6LStTEKlNilboNtobT/kEa30PtAf2Q1OgszfrG/rpVl1xaFWT9ktfkS306GmHgmnad1Sw4wabhlvFtsTw==}
     engines: {node: '>=10'}
 
-  picomatch@4.0.5:
-    resolution: {integrity: sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A==}
-    engines: {node: '>=12'}
-
   picomatch@4.0.7:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
@@ -5664,7 +5660,7 @@ snapshots:
       node-forge: 1.4.0
       npm-package-arg: 11.0.3
       ora: 3.4.0
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       pretty-bytes: 5.6.0
       pretty-format: 29.7.0
       progress: 2.0.3
@@ -5827,7 +5823,7 @@ snapshots:
       hermes-parser: 0.29.1
       jsc-safe-url: 0.2.4
       lightningcss: 1.32.0
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       postcss: 8.4.49
       resolve-from: 5.0.0
     optionalDependencies:
@@ -6035,7 +6031,7 @@ snapshots:
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
       '@jridgewell/trace-mapping': 0.3.31
 
   '@jridgewell/remapping@2.3.5':
@@ -6050,14 +6046,12 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
 
-  '@jridgewell/sourcemap-codec@1.5.5': {}
-
   '@jridgewell/sourcemap-codec@1.6.0': {}
 
   '@jridgewell/trace-mapping@0.3.31':
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
@@ -9055,8 +9049,6 @@ snapshots:
   picomatch@2.3.2: {}
 
   picomatch@3.0.2: {}
-
-  picomatch@4.0.5: {}
 
   picomatch@4.0.7: {}
 
