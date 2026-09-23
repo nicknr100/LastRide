@@ -1,21 +1,24 @@
 import { BottomNav } from '@/components/BottomNav';
 import { RailwayMark } from '@/components/RideUI';
 import { useLastRide } from '@/context/LastRideContext';
-import { distanceBetween, overpassQuery } from '@/lib/stations';
-import { apiBaseUrl } from '@/lib/api';
-import { formatDuration, formatJstDateTime, formatJstTime } from '@/lib/time';
-import { getNearbyPlaces, getTaxiEstimate } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
+import { apiBaseUrl } from '@/lib/api';
+import { distanceBetween, overpassQuery, walkingRoute, type WalkingRoute } from '@/lib/stations';
+import { formatDuration, formatJstDateTime, formatJstTime, MINUTE_MS } from '@/lib/time';
+import { formatPriceRange, formatYen, stayPrice, type StayKind } from '@/lib/stayPricing';
+import { shortLineName } from '@/lib/timetable';
 import { Feather } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { getNearbyPlaces, getTaxiEstimate } from '@workspace/api-client-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type StayOption = {
   name: string;
-  kind: 'net-cafe' | 'karaoke' | 'capsule' | 'hotel';
+  kind: StayKind;
   latitude: number;
   longitude: number;
+  distance: number;
   walkMinutes: number;
   phone?: string;
   open24h?: boolean;
@@ -23,94 +26,69 @@ type StayOption = {
 
 type TaxiEstimate = { fareYen: number; durationMinutes: number; distanceKm: number; lateNight: boolean };
 
-function formatYen(amount: number) {
-  return `¥${Math.round(amount).toLocaleString('en-US')}`;
+/** Home is only walkable within this distance; beyond it the option is hidden. */
+const WALKABLE_METERS = 6000;
+const PER_KIND = 2;
+const PREVIEW_STAYS = 3;
+const MAX_STAYS = 8;
+
+/** Cheapest a place could plausibly cost: the bottom of its estimated range. */
+function lowestPrice(stay: StayOption) {
+  return stayPrice(stay.name, stay.kind).range.from;
 }
+
+const STAY_META: Record<StayKind, { icon: React.ComponentProps<typeof Feather>['name']; ja: string; en: string }> = {
+  'net-cafe': { icon: 'monitor', ja: 'ネットカフェ', en: 'Internet café' },
+  karaoke: { icon: 'music', ja: 'カラオケ', en: 'Karaoke' },
+  capsule: { icon: 'moon', ja: 'カプセルホテル', en: 'Capsule hotel' },
+  hotel: { icon: 'briefcase', ja: 'ホテル', en: 'Hotel' },
+};
+
+const KIND_ORDER: StayKind[] = ['net-cafe', 'karaoke', 'capsule', 'hotel'];
 
 /** Japanese taxis add a 20% surcharge between 22:00 and 05:00. */
 function isLateNight(nowMs: number) {
-  const hour = Number(formatJstTime(nowMs).slice(0, 2));
-  return hour >= 22 || hour < 5;
+  return Number(formatJstTime(nowMs).slice(0, 2)) >= 22 || Number(formatJstTime(nowMs).slice(0, 2)) < 5;
 }
 
 /** Fallback when the API server is unavailable: Tokyo-area meter (¥500 first 1.096 km, ¥100 per 255 m). */
 function estimateTaxiFare(distanceMeters: number, lateNight: boolean) {
-  const base = 500;
-  const extraMeters = Math.max(0, distanceMeters - 1096);
-  const metered = base + Math.ceil(extraMeters / 255) * 100;
+  const metered = 500 + Math.ceil(Math.max(0, distanceMeters - 1096) / 255) * 100;
   return lateNight ? metered * 1.2 : metered;
 }
-
-/** Typical overnight prices in Tokyo (night packs, late-night free time, a night's stay); hotels vary widely. */
-const STAY_COSTS: Record<StayOption['kind'], { from: number; to?: number }> = {
-  'net-cafe': { from: 1500, to: 3000 },
-  karaoke: { from: 1500, to: 3500 },
-  capsule: { from: 3500, to: 6000 },
-  hotel: { from: 8000 },
-};
-const PER_KIND = 2;
-const MAX_STAYS = 6;
 
 /** Streets add roughly 30% to the straight-line distance; 80 m per minute is a normal pace. */
 function walkMinutesFor(straightMeters: number) {
   return Math.max(1, Math.ceil((straightMeters * 1.3) / 80));
 }
 
-/** Up to PER_KIND of each kind, so a hotel district still shows the nearest net café and karaoke. */
-function pickStays(options: Array<StayOption & { distance: number }>): StayOption[] {
-  const perKind = new Map<StayOption['kind'], number>();
-  const seen = new Set<string>();
-  return options
-    .sort((first, second) => first.distance - second.distance)
-    .filter((option) => {
-      const count = perKind.get(option.kind) ?? 0;
-      if (seen.has(option.name) || count >= PER_KIND) return false;
-      seen.add(option.name);
-      perKind.set(option.kind, count + 1);
-      return true;
-    })
-    .slice(0, MAX_STAYS);
-}
-
 async function fetchNearbyStays(latitude: number, longitude: number): Promise<StayOption[]> {
   if (apiBaseUrl) {
     try {
       const places = await getNearbyPlaces({ lat: latitude, lon: longitude });
-      return pickStays(places.map((place) => ({ ...place, distance: place.distanceMeters, walkMinutes: walkMinutesFor(place.distanceMeters) })));
+      return places
+        .map((place) => ({ ...place, distance: place.distanceMeters, walkMinutes: walkMinutesFor(place.distanceMeters) }))
+        .sort((first, second) => first.distance - second.distance);
     } catch {
       // Fall back to OpenStreetMap below.
     }
   }
   const query = `[out:json][timeout:15];(node(around:1500,${latitude},${longitude})["amenity"="internet_cafe"];node(around:1500,${latitude},${longitude})["amenity"="karaoke_box"];node(around:1500,${latitude},${longitude})["tourism"~"^(hotel|hostel|guest_house)$"];);out tags center 30;`;
   const elements = await overpassQuery(query);
-  const options: Array<StayOption & { distance: number }> = [];
+  const options: StayOption[] = [];
   for (const element of elements) {
     if (element.lat === undefined || element.lon === undefined) continue;
     const tags = element.tags ?? {};
     const name = tags.name ?? tags['name:en'];
     if (!name) continue;
-    const kind: StayOption['kind'] = tags.amenity === 'internet_cafe' ? 'net-cafe' : tags.amenity === 'karaoke_box' ? 'karaoke' : 'hotel';
+    const kind: StayKind = tags.amenity === 'internet_cafe' ? 'net-cafe' : tags.amenity === 'karaoke_box' ? 'karaoke' : 'hotel';
     const distance = distanceBetween({ latitude, longitude }, { latitude: element.lat, longitude: element.lon });
-    options.push({ name, kind, latitude: element.lat, longitude: element.lon, walkMinutes: walkMinutesFor(distance), phone: tags.phone, distance });
+    options.push({ name, kind, latitude: element.lat, longitude: element.lon, distance, walkMinutes: walkMinutesFor(distance), phone: tags.phone });
   }
-  return pickStays(options);
+  return options.sort((first, second) => first.distance - second.distance);
 }
 
-function openInMaps(stay: StayOption) {
-  const label = encodeURIComponent(stay.name);
-  const url =
-    Platform.OS === 'ios'
-      ? `https://maps.apple.com/?q=${label}&ll=${stay.latitude},${stay.longitude}`
-      : `https://www.google.com/maps/search/?api=1&query=${stay.latitude},${stay.longitude}`;
-  void Linking.openURL(url);
-}
-
-function formatCostRange({ from, to }: { from: number; to?: number }) {
-  return to ? `${formatYen(from)}–${formatYen(to).slice(1)}` : `${formatYen(from)}~`;
-}
-
-async function fetchTaxiEstimate(from: { latitude: number; longitude: number }, to: { latitude: number; longitude: number }): Promise<TaxiEstimate | null> {
-  const nowMs = Date.now();
+async function fetchTaxiEstimate(from: { latitude: number; longitude: number }, to: { latitude: number; longitude: number }, nowMs: number): Promise<TaxiEstimate | null> {
   const lateNight = isLateNight(nowMs);
   if (apiBaseUrl) {
     try {
@@ -123,33 +101,70 @@ async function fetchTaxiEstimate(from: { latitude: number; longitude: number }, 
   }
   const response = await fetch(
     `https://routing.openstreetmap.de/routed-car/route/v1/driving/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?overview=false&alternatives=false&steps=false`,
-  );
-  if (!response.ok) return null;
+  ).catch(() => null);
+  if (!response?.ok) return null;
   const payload = (await response.json()) as { routes?: Array<{ distance: number; duration: number }> };
   const route = payload.routes?.[0];
   if (!route) return null;
   return { fareYen: estimateTaxiFare(route.distance, lateNight), durationMinutes: Math.max(1, Math.round(route.duration / 60)), distanceKm: route.distance / 1000, lateNight };
 }
 
-const STAY_META: Record<StayOption['kind'], { icon: React.ComponentProps<typeof Feather>['name']; ja: string; en: string }> = {
-  'net-cafe': { icon: 'monitor', ja: 'ネットカフェ', en: 'Internet café' },
-  karaoke: { icon: 'music', ja: 'カラオケ', en: 'Karaoke' },
-  capsule: { icon: 'moon', ja: 'カプセルホテル', en: 'Capsule hotel' },
-  hotel: { icon: 'briefcase', ja: 'ホテル', en: 'Hotel' },
-};
+function openMaps(latitude: number, longitude: number, label: string, driving = false) {
+  const query = encodeURIComponent(label);
+  const url =
+    Platform.OS === 'ios'
+      ? `https://maps.apple.com/?${driving ? 'daddr' : 'q'}=${driving ? `${latitude},${longitude}` : query}&ll=${latitude},${longitude}${driving ? '&dirflg=d' : ''}`
+      : `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}${driving ? '&travelmode=driving' : ''}`;
+  void Linking.openURL(url);
+}
+
+/** Up to PER_KIND of each kind, so a hotel district still shows the nearest net café and karaoke. */
+function balancedStays(options: StayOption[]): StayOption[] {
+  const perKind = new Map<StayKind, number>();
+  const seen = new Set<string>();
+  return options
+    .filter((option) => {
+      const count = perKind.get(option.kind) ?? 0;
+      if (seen.has(option.name) || count >= PER_KIND) return false;
+      seen.add(option.name);
+      perKind.set(option.kind, count + 1);
+      return true;
+    })
+    .slice(0, MAX_STAYS);
+}
+
+
+type OptionKey = 'train' | 'stay' | 'taxi' | 'walk';
 
 export default function AlternativesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { language, status, destination, currentTime, firstTrain, minutesUntilFirstTrain, stationName, stationNameJa, userCoordinates, homeStationOption, isLocating, requestLocation } = useLastRide();
+  const {
+    language, status, destination, currentTime, nowMs, walkingSpeed,
+    firstTrain, firstTrainRoute, minutesUntilFirstTrain,
+    stationName, stationNameJa, userCoordinates, homeStationOption, isLocating, locationError, requestLocation,
+  } = useLastRide();
   const ja = language === 'ja';
   const [stays, setStays] = useState<StayOption[] | null>(null);
   const [staysError, setStaysError] = useState(false);
   const [isLoadingStays, setIsLoadingStays] = useState(false);
   const [taxi, setTaxi] = useState<TaxiEstimate | null>(null);
   const [isLoadingTaxi, setIsLoadingTaxi] = useState(false);
+  const [walkHome, setWalkHome] = useState<WalkingRoute | null>(null);
+  const [selected, setSelected] = useState<OptionKey>('train');
+  const [kindFilter, setKindFilter] = useState<StayKind | null>(null);
+  const [sortBy, setSortBy] = useState<'distance' | 'price'>('distance');
+  const [showAllStays, setShowAllStays] = useState(false);
   const requestToken = useRef(0);
   const [retryCount, setRetryCount] = useState(0);
+
+  const homeHasCoordinates = !!homeStationOption && (homeStationOption.latitude !== 0 || homeStationOption.longitude !== 0);
+
+  // Opened straight from the "missed the last train?" notification, this screen may be
+  // the first thing shown, so it asks for a location like the leave screen does.
+  useEffect(() => {
+    if (!userCoordinates && !isLocating && !locationError) void requestLocation();
+  }, [userCoordinates, isLocating, locationError, requestLocation]);
 
   useEffect(() => {
     const token = ++requestToken.current;
@@ -157,6 +172,7 @@ export default function AlternativesScreen() {
     setStays(null);
     setStaysError(false);
     setTaxi(null);
+    setWalkHome(null);
     if (!userCoordinates) {
       setIsLoadingStays(false);
       setIsLoadingTaxi(false);
@@ -173,9 +189,9 @@ export default function AlternativesScreen() {
       .finally(() => {
         if (token === requestToken.current) setIsLoadingStays(false);
       });
-    if (homeStationOption && (homeStationOption.latitude !== 0 || homeStationOption.longitude !== 0)) {
+    if (homeStationOption && homeHasCoordinates) {
       setIsLoadingTaxi(true);
-      fetchTaxiEstimate(userCoordinates, homeStationOption)
+      fetchTaxiEstimate(userCoordinates, homeStationOption, nowMs)
         .then((result) => {
           if (token === requestToken.current) setTaxi(result);
         })
@@ -185,10 +201,82 @@ export default function AlternativesScreen() {
         .finally(() => {
           if (token === requestToken.current) setIsLoadingTaxi(false);
         });
+      // Walking home is only worth offering when home is close enough to walk.
+      if (distanceBetween(userCoordinates, homeStationOption) <= WALKABLE_METERS) {
+        walkingRoute(userCoordinates, homeStationOption, walkingSpeed)
+          .then((route) => {
+            if (token === requestToken.current && route.distanceMeters <= WALKABLE_METERS) setWalkHome(route);
+          })
+          .catch(() => undefined);
+      }
     }
-  }, [userCoordinates, homeStationOption, retryCount]);
+    // nowMs is deliberately not a dependency: it ticks constantly and would refetch.
+  }, [userCoordinates, homeStationOption, homeHasCoordinates, walkingSpeed, retryCount]);
 
   const station = ja ? stationNameJa : stationName;
+  const homeLabel = destination || (ja ? '自宅の駅' : 'your home station');
+  const trainFare = firstTrainRoute?.fareYen ?? null;
+  const homeByTrain = firstTrainRoute?.arrivesAt ?? null;
+  const homeByTaxi = taxi ? nowMs + taxi.durationMinutes * MINUTE_MS : null;
+  const homeByWalk = walkHome ? nowMs + walkHome.walkingMinutes * MINUTE_MS : null;
+  const cheapestStay = stays && stays.length > 0 ? Math.min(...stays.map(lowestPrice)) : null;
+
+  type Option = { key: OptionKey; icon: React.ComponentProps<typeof Feather>['name']; label: string; detail: string; homeBy: number | null; cost: number | null };
+  const options: Option[] = [
+    {
+      key: 'train',
+      icon: 'sunrise',
+      label: ja ? '始発を待つ' : 'Wait for the first train',
+      detail: minutesUntilFirstTrain === null ? (ja ? '始発を確認中' : 'checking') : ja ? `待ち${formatDuration(minutesUntilFirstTrain, true)}` : `${formatDuration(minutesUntilFirstTrain, false)} wait`,
+      homeBy: homeByTrain,
+      cost: trainFare,
+    },
+    ...(cheapestStay !== null
+      ? [{
+          key: 'stay' as const,
+          icon: 'moon' as const,
+          label: ja ? '近くで待つ＋始発' : 'Wait somewhere + first train',
+          detail: ja ? `${stays?.length ?? 0}軒が徒歩圏内` : `${stays?.length ?? 0} places nearby`,
+          homeBy: homeByTrain,
+          cost: trainFare === null ? cheapestStay : cheapestStay + trainFare,
+        }]
+      : []),
+    ...(taxi
+      ? [{
+          key: 'taxi' as const,
+          icon: 'truck' as const,
+          label: ja ? 'タクシー' : 'Taxi',
+          detail: ja ? `約${taxi.durationMinutes}分 · ${taxi.distanceKm.toFixed(1)} km` : `~${taxi.durationMinutes} min · ${taxi.distanceKm.toFixed(1)} km`,
+          homeBy: homeByTaxi,
+          cost: taxi.fareYen,
+        }]
+      : []),
+    ...(walkHome
+      ? [{
+          key: 'walk' as const,
+          icon: 'navigation' as const,
+          label: ja ? '歩いて帰る' : 'Walk home',
+          detail: ja ? `徒歩${walkHome.walkingMinutes}分 · ${(walkHome.distanceMeters / 1000).toFixed(1)} km` : `${walkHome.walkingMinutes} min · ${(walkHome.distanceMeters / 1000).toFixed(1)} km`,
+          homeBy: homeByWalk,
+          cost: 0,
+        }]
+      : []),
+  ];
+  const costs = options.map((option) => option.cost).filter((cost): cost is number => cost !== null);
+  const times = options.map((option) => option.homeBy).filter((time): time is number => time !== null);
+  const cheapest = costs.length > 1 ? Math.min(...costs) : null;
+  const fastest = times.length > 1 ? Math.min(...times) : null;
+
+  const visibleStays = stays ? (kindFilter ? stays.filter((stay) => stay.kind === kindFilter) : balancedStays(stays)) : null;
+  const sortedStays = visibleStays
+    ? [...visibleStays]
+        .sort((first, second) => (sortBy === 'price' ? lowestPrice(first) - lowestPrice(second) || first.distance - second.distance : first.distance - second.distance))
+        .slice(0, showAllStays ? MAX_STAYS : PREVIEW_STAYS)
+    : null;
+  const filteredCount = visibleStays?.length ?? 0;
+  const availableKinds = KIND_ORDER.filter((kind) => stays?.some((stay) => stay.kind === kind));
+
+  const waitNote = minutesUntilFirstTrain === null ? null : ja ? `始発まで${formatDuration(minutesUntilFirstTrain, true)}` : `${formatDuration(minutesUntilFirstTrain, false)} until ${firstTrain}`;
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -201,113 +289,223 @@ export default function AlternativesScreen() {
           <Text style={[styles.kicker, { color: status === 'departed' ? colors.destructive : colors.primary }]}>
             {status === 'departed' ? (ja ? '終電が発車しました' : 'THE LAST TRAIN HAS LEFT') : ja ? '乗れなかったときは' : 'IF YOU MISS IT'}
           </Text>
-          <Text style={[styles.title, { color: colors.foreground }]}>
-            {status === 'departed' ? (ja ? '大丈夫。次の一手を\n選びましょう。' : 'It’s OK — let’s get\nyou home safely.') : ja ? '帰る方法は\nほかにもあります。' : 'Your backup\nways home.'}
-          </Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>{ja ? `${homeLabel}へ帰る方法` : `Ways home to ${homeLabel}`}</Text>
+        </View>
+
+        {/* Pick an option; only its details are shown below */}
+        <View style={styles.options}>
+          {options.map((option) => {
+            const isSelected = option.key === selected;
+            const isCheapest = cheapest !== null && option.cost === cheapest;
+            const isFastest = fastest !== null && option.homeBy === fastest;
+            return (
+              <Pressable
+                key={option.key}
+                testID={`option-${option.key}`}
+                onPress={() => setSelected(option.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
+                style={({ pressed }) => [
+                  styles.option,
+                  { backgroundColor: isSelected ? colors.foreground : colors.card, borderColor: isSelected ? colors.foreground : colors.border, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <Feather name={option.icon} size={19} color={isSelected ? colors.primary : colors.secondaryForeground} />
+                <View style={styles.optionCopy}>
+                  <Text style={[styles.optionLabel, { color: isSelected ? colors.card : colors.foreground }]}>{option.label}</Text>
+                  <Text style={[styles.optionDetail, { color: isSelected ? colors.muted : colors.mutedForeground }]}>
+                    {option.homeBy ? (ja ? `${formatJstTime(option.homeBy)}に到着 · ` : `home ~${formatJstTime(option.homeBy)} · `) : ''}
+                    {option.detail}
+                  </Text>
+                </View>
+                <View style={styles.optionRight}>
+                  <Text style={[styles.optionCost, { color: isSelected ? colors.card : colors.foreground }]}>
+                    {option.cost === null ? '—' : option.cost === 0 ? (ja ? '無料' : 'Free') : `${formatYen(option.cost)}${option.key === 'stay' ? (ja ? '〜' : '+') : ''}`}
+                  </Text>
+                  {(isCheapest || isFastest) && (
+                    <View style={[styles.tag, { backgroundColor: isFastest ? colors.primary : colors.secondary }]}>
+                      <Text style={[styles.tagText, { color: isFastest ? colors.primaryForeground : colors.secondaryForeground }]}>
+                        {isFastest ? (ja ? '最速' : 'fastest') : ja ? '最安' : 'cheapest'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
 
         {/* First train */}
-        <View style={[styles.heroCard, { backgroundColor: colors.foreground }]}>
-          <View style={styles.heroTop}>
-            <View style={[styles.heroBadge, { backgroundColor: colors.primary }]}><Feather name="sunrise" color={colors.primaryForeground} size={16} /></View>
-            <Text style={[styles.heroLabel, { color: colors.primary }]}>{ja ? '始発を待つ' : 'WAIT FOR THE FIRST TRAIN'}</Text>
-          </View>
-          <Text style={[styles.heroTime, { color: colors.card }]}>{firstTrain}</Text>
-          <Text style={[styles.heroSub, { color: colors.muted }]}>{ja ? `${station} → ${destination}` : `${station} → ${destination}`}</Text>
-          <View style={styles.heroStats}>
-            <View style={styles.heroStat}>
-              <Text style={[styles.heroStatLabel, { color: colors.mutedForeground }]}>{ja ? '待ち時間' : 'Wait'}</Text>
-              <Text style={[styles.heroStatValue, { color: colors.card }]}>{minutesUntilFirstTrain === null ? '—' : formatDuration(minutesUntilFirstTrain, ja)}</Text>
+        {selected === 'train' && (
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.panelHead}>
+              <Text style={[styles.panelTime, { color: colors.foreground }]}>{firstTrain}</Text>
+              <View style={styles.panelHeadCopy}>
+                <Text style={[styles.panelTitle, { color: colors.foreground }]}>{ja ? `${station}発` : `from ${station}`}</Text>
+                <Text style={[styles.note, { color: colors.mutedForeground }]}>
+                  {[waitNote, trainFare === null ? null : `${formatYen(trainFare)}`, homeByTrain ? (ja ? `${formatJstTime(homeByTrain)}着` : `arrives ${formatJstTime(homeByTrain)}`) : null].filter(Boolean).join(' · ')}
+                </Text>
+              </View>
             </View>
-            <View style={[styles.heroDivider, { backgroundColor: colors.mutedForeground }]} />
-            <View style={styles.heroStat}>
-              <Text style={[styles.heroStatLabel, { color: colors.mutedForeground }]}>{ja ? '追加費用' : 'Extra cost'}</Text>
-              <Text style={[styles.heroStatValue, { color: colors.card }]}>¥0</Text>
-            </View>
+            {firstTrainRoute?.legs && firstTrainRoute.legs.length > 0 && (
+              <View style={styles.legs}>
+                {firstTrainRoute.legs.map((leg) => (
+                  <View key={`${leg.line}-${leg.departsAt}`} style={styles.leg}>
+                    <Text style={[styles.legTime, { color: colors.foreground }]}>{formatJstTime(leg.departsAt)}</Text>
+                    <View style={styles.cardCopy}>
+                      <Text style={[styles.cardTitle, { color: colors.foreground }]}>{ja ? `${leg.from} → ${leg.to}` : `${leg.fromEn ?? leg.from} → ${leg.toEn ?? leg.to}`}</Text>
+                      <Text style={[styles.note, { color: colors.mutedForeground }]}>{ja ? shortLineName(leg.line) : (leg.lineEn ?? shortLineName(leg.line))}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+            <Text style={[styles.note, { color: colors.mutedForeground }]}>
+              {ja ? '運賃のほかに、始発まで待つ場所の料金がかかります。' : 'The fare above is the train only — you’ll also need somewhere to wait.'}
+            </Text>
           </View>
-        </View>
+        )}
+
+        {/* Somewhere to wait */}
+        {selected === 'stay' && (
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.chipRow}>
+              <Pressable testID="filter-all" onPress={() => setKindFilter(null)} style={[styles.chip, { backgroundColor: kindFilter === null ? colors.primary : colors.secondary }]}>
+                <Text style={[styles.chipText, { color: kindFilter === null ? colors.primaryForeground : colors.secondaryForeground }]}>{ja ? 'すべて' : 'All'}</Text>
+              </Pressable>
+              {availableKinds.map((kind) => (
+                <Pressable key={kind} testID={`filter-${kind}`} onPress={() => setKindFilter(kind === kindFilter ? null : kind)} style={[styles.chip, { backgroundColor: kind === kindFilter ? colors.primary : colors.secondary }]}>
+                  <Text style={[styles.chipText, { color: kind === kindFilter ? colors.primaryForeground : colors.secondaryForeground }]}>{ja ? STAY_META[kind].ja : STAY_META[kind].en}</Text>
+                </Pressable>
+              ))}
+              <Pressable testID="sort-toggle" onPress={() => setSortBy(sortBy === 'distance' ? 'price' : 'distance')} style={[styles.chip, { backgroundColor: colors.background }]}>
+                <Feather name={sortBy === 'distance' ? 'map-pin' : 'tag'} size={12} color={colors.mutedForeground} />
+                <Text style={[styles.chipText, { color: colors.mutedForeground }]}>{sortBy === 'distance' ? (ja ? '近い順' : 'Nearest') : ja ? '安い順' : 'Cheapest'}</Text>
+              </Pressable>
+            </View>
+
+            {isLoadingStays ? (
+              <View style={styles.loadingRow}><ActivityIndicator color={colors.primary} /><Text style={[styles.note, { color: colors.mutedForeground }]}>{ja ? '周辺を検索中…' : 'Searching around you…'}</Text></View>
+            ) : staysError ? (
+              <Pressable testID="retry-stays" onPress={() => setRetryCount((count) => count + 1)} style={styles.loadingRow}>
+                <Feather name="refresh-cw" color={colors.secondaryForeground} size={17} />
+                <Text style={[styles.note, { color: colors.secondaryForeground }]}>{ja ? '周辺検索が混み合っています。タップして再試行' : 'Nearby search was busy. Tap to retry'}</Text>
+              </Pressable>
+            ) : sortedStays && sortedStays.length > 0 ? (
+              <>
+                {sortedStays.map((stay) => {
+                  const meta = STAY_META[stay.kind];
+                  const { range, chain } = stayPrice(stay.name, stay.kind);
+                  return (
+                    <View key={stay.name} style={styles.stayRow}>
+                      <View style={[styles.cardIcon, { backgroundColor: colors.secondary }]}><Feather name={meta.icon} color={colors.secondaryForeground} size={18} /></View>
+                      <Pressable style={styles.cardCopy} onPress={() => openMaps(stay.latitude, stay.longitude, stay.name)} accessibilityRole="link" accessibilityLabel={ja ? `${stay.name}を地図で開く` : `Open ${stay.name} in Maps`}>
+                        <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{stay.name}</Text>
+                        <Text style={[styles.note, { color: colors.mutedForeground }]}>
+                          {ja ? `${meta.ja} · 徒歩${stay.walkMinutes}分` : `${meta.en} · ${stay.walkMinutes} min walk`}
+                          {stay.open24h ? (ja ? ' · 24時間' : ' · 24h') : ''}
+                        </Text>
+                        <Text style={[styles.stayPrice, { color: colors.foreground }]}>
+                          {formatPriceRange(range)}
+                          <Text style={[styles.priceNote, { color: colors.mutedForeground }]}>{chain ? (ja ? '  店舗目安' : '  chain rate') : ja ? '  目安' : '  typical'}</Text>
+                        </Text>
+                      </Pressable>
+                      <View style={styles.stayActions}>
+                        {stay.phone && (
+                          <Pressable onPress={() => void Linking.openURL(`tel:${stay.phone}`)} hitSlop={8} accessibilityRole="button" accessibilityLabel={ja ? `${stay.name}に電話` : `Call ${stay.name}`} style={[styles.iconButton, { backgroundColor: colors.secondary }]}>
+                            <Feather name="phone" color={colors.secondaryForeground} size={15} />
+                          </Pressable>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+                {filteredCount > PREVIEW_STAYS && (
+                  <Pressable testID="show-more-stays" onPress={() => setShowAllStays(!showAllStays)} style={styles.moreButton}>
+                    <Text style={[styles.chipText, { color: colors.primary }]}>
+                      {showAllStays ? (ja ? '少なく表示' : 'Show fewer') : ja ? `ほか${Math.min(filteredCount, MAX_STAYS) - PREVIEW_STAYS}件を表示` : `Show ${Math.min(filteredCount, MAX_STAYS) - PREVIEW_STAYS} more`}
+                    </Text>
+                    <Feather name={showAllStays ? 'chevron-up' : 'chevron-down'} color={colors.primary} size={15} />
+                  </Pressable>
+                )}
+                <Text style={[styles.note, { color: colors.mutedForeground }]}>
+                  {ja
+                    ? '料金はチェーン店の一般的な深夜料金の目安です。実際の料金は店舗にご確認ください。タップで地図を開きます。'
+                    : 'Prices are typical late-night rates for that chain — check with the venue. Tap a name for Maps.'}
+                </Text>
+              </>
+            ) : (
+              <Text style={[styles.note, { color: colors.mutedForeground }]}>
+                {ja ? '徒歩圏内に見つかりませんでした。タクシーか始発待ちをご検討ください。' : 'Nothing within walking distance. A taxi or waiting for the first train may be your options.'}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* Taxi */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{ja ? 'タクシーで帰る' : 'TAKE A TAXI'}</Text>
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.cardIcon, { backgroundColor: colors.secondary }]}><Feather name="truck" color={colors.secondaryForeground} size={20} /></View>
-            <View style={styles.cardCopy}>
-              <Text style={[styles.cardTitle, { color: colors.foreground }]}>{ja ? `${destination} まで` : `To ${destination}`}</Text>
-              {isLoadingTaxi ? (
-                <Text style={[styles.cardNote, { color: colors.mutedForeground }]}>{ja ? '概算を計算中…' : 'Calculating estimate…'}</Text>
-              ) : taxi ? (
-                <Text style={[styles.cardNote, { color: colors.mutedForeground }]}>{ja ? `約${taxi.durationMinutes}分 · ${taxi.distanceKm.toFixed(1)} km${taxi.lateNight ? ' · 深夜料金込み' : ''}` : `~${taxi.durationMinutes} min · ${taxi.distanceKm.toFixed(1)} km${taxi.lateNight ? ' · incl. late-night rate' : ''}`}</Text>
-              ) : (
-                <Text style={[styles.cardNote, { color: colors.mutedForeground }]}>{ja ? '現在地と自宅駅が必要です。' : 'Needs your location and home station.'}</Text>
-              )}
+        {selected === 'taxi' && (
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.panelHead}>
+              <Text style={[styles.panelTime, { color: colors.foreground }]}>{taxi ? formatYen(taxi.fareYen) : '—'}</Text>
+              <View style={styles.panelHeadCopy}>
+                <Text style={[styles.panelTitle, { color: colors.foreground }]}>{ja ? `${homeLabel} まで` : `To ${homeLabel}`}</Text>
+                <Text style={[styles.note, { color: colors.mutedForeground }]}>
+                  {isLoadingTaxi
+                    ? ja ? '概算を計算中…' : 'Calculating estimate…'
+                    : taxi
+                      ? [
+                          ja ? `約${taxi.durationMinutes}分 · ${taxi.distanceKm.toFixed(1)} km` : `~${taxi.durationMinutes} min · ${taxi.distanceKm.toFixed(1)} km`,
+                          taxi.lateNight ? (ja ? '深夜料金込み' : 'incl. late-night rate') : null,
+                          homeByTaxi ? (ja ? `${formatJstTime(homeByTaxi)}着` : `home ~${formatJstTime(homeByTaxi)}`) : null,
+                        ].filter(Boolean).join(' · ')
+                      : ja ? '現在地と自宅駅が必要です。' : 'Needs your location and home station.'}
+                </Text>
+              </View>
             </View>
-            <View style={styles.cardRight}>
-              <Text style={[styles.cardCost, { color: colors.foreground }]}>{taxi ? formatYen(taxi.fareYen) : '—'}</Text>
-              <Text style={[styles.cardCostLabel, { color: colors.mutedForeground }]}>{ja ? '概算' : 'est.'}</Text>
-            </View>
+            {homeStationOption && homeHasCoordinates && (
+              <>
+                <Pressable testID="taxi-route" onPress={() => openMaps(homeStationOption.latitude, homeStationOption.longitude, homeStationOption.nameJa, true)} accessibilityRole="button" style={({ pressed }) => [styles.actionButton, { backgroundColor: colors.foreground, opacity: pressed ? 0.85 : 1 }]}>
+                  <Feather name="map" color={colors.card} size={16} />
+                  <Text style={[styles.actionText, { color: colors.card }]}>{ja ? '地図でルート' : 'Driving route'}</Text>
+                </Pressable>
+                {/* Japanese speakers can just tell the driver; this is for everyone else. */}
+                {!ja && (
+                  <View style={[styles.phraseBox, { backgroundColor: colors.secondary }]}>
+                    <Text style={[styles.priceNote, { color: colors.secondaryForeground }]}>Show the driver</Text>
+                    <Text selectable style={[styles.phrase, { color: colors.secondaryForeground }]}>{`${homeStationOption.nameJa}駅までお願いします`}</Text>
+                  </View>
+                )}
+              </>
+            )}
           </View>
-        </View>
+        )}
 
-        {/* Nearby stays */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{ja ? '近くで朝まで過ごす' : 'STAY NEARBY UNTIL MORNING'}</Text>
-          {!userCoordinates ? (
-            <Pressable testID="alternatives-use-location" onPress={() => void requestLocation()} style={({ pressed }) => [styles.locationPrompt, { backgroundColor: colors.secondary, opacity: pressed ? 0.7 : 1 }]}>
-              <Feather name="crosshair" color={colors.secondaryForeground} size={18} />
-              <Text style={[styles.locationPromptText, { color: colors.secondaryForeground }]}>{isLocating ? (ja ? '現在地を取得中…' : 'Getting your location…') : ja ? '現在地から周辺の選択肢を表示' : 'Use my location to show nearby options'}</Text>
-            </Pressable>
-          ) : isLoadingStays ? (
-            <View style={[styles.loadingBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <ActivityIndicator color={colors.primary} />
-              <Text style={[styles.cardNote, { color: colors.mutedForeground }]}>{ja ? '周辺を検索中…' : 'Searching around you…'}</Text>
+        {/* Walk home */}
+        {selected === 'walk' && walkHome && (
+          <View style={[styles.panel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.panelHead}>
+              <Text style={[styles.panelTime, { color: colors.foreground }]}>{ja ? `${walkHome.walkingMinutes}分` : `${walkHome.walkingMinutes} min`}</Text>
+              <View style={styles.panelHeadCopy}>
+                <Text style={[styles.panelTitle, { color: colors.foreground }]}>{ja ? `${homeLabel} まで歩く` : `Walk to ${homeLabel}`}</Text>
+                <Text style={[styles.note, { color: colors.mutedForeground }]}>
+                  {`${(walkHome.distanceMeters / 1000).toFixed(1)} km`}
+                  {homeByWalk ? (ja ? ` · ${formatJstTime(homeByWalk)}着` : ` · home ~${formatJstTime(homeByWalk)}`) : ''}
+                </Text>
+              </View>
             </View>
-          ) : staysError ? (
-            <Pressable testID="retry-stays" onPress={() => setRetryCount((count) => count + 1)} style={({ pressed }) => [styles.locationPrompt, { backgroundColor: colors.secondary, opacity: pressed ? 0.7 : 1 }]}>
-              <Feather name="refresh-cw" color={colors.secondaryForeground} size={17} />
-              <Text style={[styles.locationPromptText, { color: colors.secondaryForeground }]}>{ja ? '周辺検索が混み合っています。タップして再試行' : 'Nearby search was busy. Tap to retry'}</Text>
+            <Pressable testID="walk-home" onPress={() => homeStationOption && openMaps(homeStationOption.latitude, homeStationOption.longitude, homeStationOption.nameJa)} accessibilityRole="button" style={({ pressed }) => [styles.actionButton, { backgroundColor: colors.foreground, opacity: pressed ? 0.85 : 1 }]}>
+              <Feather name="map" color={colors.card} size={16} />
+              <Text style={[styles.actionText, { color: colors.card }]}>{ja ? '地図で見る' : 'Open in Maps'}</Text>
             </Pressable>
-          ) : stays && stays.length > 0 ? (
-            <View style={styles.list}>
-              {stays.map((stay) => {
-                const meta = STAY_META[stay.kind];
-                return (
-                  <Pressable
-                    key={stay.name}
-                    onPress={() => openInMaps(stay)}
-                    accessibilityRole="link"
-                    accessibilityLabel={ja ? `${stay.name}を地図で開く` : `Open ${stay.name} in Maps`}
-                    style={({ pressed }) => [styles.card, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
-                  >
-                    <View style={[styles.cardIcon, { backgroundColor: colors.secondary }]}><Feather name={meta.icon} color={colors.secondaryForeground} size={19} /></View>
-                    <View style={styles.cardCopy}>
-                      <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>{stay.name}</Text>
-                      <Text style={[styles.cardNote, { color: colors.mutedForeground }]}>
-                        {ja ? `${meta.ja} · 徒歩${stay.walkMinutes}分` : `${meta.en} · ${stay.walkMinutes} min walk`}
-                        {stay.open24h ? (ja ? ' · 24時間営業' : ' · open 24h') : ''}
-                      </Text>
-                      <Text style={[styles.cardCostLabel, { color: colors.mutedForeground }]}>{formatCostRange(STAY_COSTS[stay.kind])} {ja ? '目安' : 'typical'}</Text>
-                    </View>
-                    {stay.phone && (
-                      <Pressable
-                        onPress={() => void Linking.openURL(`tel:${stay.phone}`)}
-                        hitSlop={10}
-                        accessibilityRole="button"
-                        accessibilityLabel={ja ? `${stay.name}に電話` : `Call ${stay.name}`}
-                        style={[styles.callButton, { backgroundColor: colors.secondary }]}
-                      >
-                        <Feather name="phone" color={colors.secondaryForeground} size={16} />
-                      </Pressable>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={[styles.cardNote, { color: colors.mutedForeground }]}>{ja ? '徒歩圏内に宿泊できる場所が見つかりませんでした。' : 'No overnight spots found within walking distance.'}</Text>
-          )}
-          <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>{ja ? '料金は都内の一般的な深夜料金の目安です。営業時間は店舗にご確認ください。タップで地図を開きます。' : 'Prices are typical Tokyo overnight rates. Check opening hours with the venue. Tap a place to open it in Maps.'}</Text>
-        </View>
+          </View>
+        )}
+
+        {!userCoordinates && (
+          <Pressable testID="alternatives-use-location" onPress={() => void requestLocation()} style={({ pressed }) => [styles.locationPrompt, { backgroundColor: colors.secondary, opacity: pressed ? 0.7 : 1 }]}>
+            <Feather name="crosshair" color={colors.secondaryForeground} size={18} />
+            <Text style={[styles.locationPromptText, { color: colors.secondaryForeground }]}>{isLocating ? (ja ? '現在地を取得中…' : 'Getting your location…') : ja ? '現在地から周辺の選択肢を表示' : 'Use my location to show nearby options'}</Text>
+          </Pressable>
+        )}
       </ScrollView>
       <BottomNav language={language} />
     </View>
@@ -316,39 +514,49 @@ export default function AlternativesScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { gap: 22, paddingHorizontal: 20 },
+  content: { gap: 18, paddingHorizontal: 20 },
   top: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   brand: { alignItems: 'center', flexDirection: 'row', gap: 7 },
   brandText: { fontFamily: 'Inter_700Bold', fontSize: 17 },
   clock: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
-  heading: { gap: 8, marginTop: 4 },
+  heading: { gap: 6, marginTop: 2 },
   kicker: { fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 1.3 },
-  title: { fontFamily: 'Inter_700Bold', fontSize: 34, letterSpacing: -1.3, lineHeight: 40 },
-  heroCard: { borderRadius: 26, gap: 4, padding: 22 },
-  heroTop: { alignItems: 'center', flexDirection: 'row', gap: 9 },
-  heroBadge: { alignItems: 'center', borderRadius: 10, height: 30, justifyContent: 'center', width: 30 },
-  heroLabel: { fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 0.6 },
-  heroTime: { fontFamily: 'Inter_700Bold', fontSize: 52, letterSpacing: -2.2, lineHeight: 60, marginTop: 6 },
-  heroSub: { fontFamily: 'Inter_500Medium', fontSize: 13 },
-  heroStats: { alignItems: 'center', flexDirection: 'row', gap: 18, marginTop: 14 },
-  heroStat: { gap: 2 },
-  heroStatLabel: { fontFamily: 'Inter_500Medium', fontSize: 11 },
-  heroStatValue: { fontFamily: 'Inter_700Bold', fontSize: 18 },
-  heroDivider: { height: 30, opacity: 0.35, width: 1 },
-  section: { gap: 9 },
-  sectionLabel: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 0.9 },
-  list: { gap: 10 },
-  card: { alignItems: 'center', borderRadius: 20, borderWidth: 1, flexDirection: 'row', gap: 12, padding: 14 },
-  cardIcon: { alignItems: 'center', borderRadius: 13, height: 44, justifyContent: 'center', width: 44 },
-  cardCopy: { flex: 1, gap: 3 },
-  cardTitle: { fontFamily: 'Inter_700Bold', fontSize: 15 },
-  cardNote: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 17 },
-  cardRight: { alignItems: 'flex-end', gap: 1 },
-  cardCost: { fontFamily: 'Inter_700Bold', fontSize: 16 },
-  callButton: { alignItems: 'center', borderRadius: 12, height: 38, justifyContent: 'center', width: 38 },
-  cardCostLabel: { fontFamily: 'Inter_400Regular', fontSize: 10 },
+  title: { fontFamily: 'Inter_700Bold', fontSize: 27, letterSpacing: -1 },
+  options: { gap: 8 },
+  option: { alignItems: 'center', borderRadius: 18, borderWidth: 1, flexDirection: 'row', gap: 13, padding: 14 },
+  optionCopy: { flex: 1, gap: 2 },
+  optionLabel: { fontFamily: 'Inter_700Bold', fontSize: 15 },
+  optionDetail: { fontFamily: 'Inter_400Regular', fontSize: 12 },
+  optionRight: { alignItems: 'flex-end', gap: 3 },
+  optionCost: { fontFamily: 'Inter_700Bold', fontSize: 16 },
+  priceNote: { fontFamily: 'Inter_400Regular', fontSize: 10 },
+  tag: { borderRadius: 9, paddingHorizontal: 8, paddingVertical: 3 },
+  tagText: { fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 0.3, textTransform: 'uppercase' },
+  panel: { borderRadius: 22, borderWidth: 1, gap: 16, padding: 18 },
+  panelHead: { alignItems: 'center', flexDirection: 'row', gap: 16 },
+  panelHeadCopy: { flex: 1, gap: 3 },
+  panelTime: { fontFamily: 'Inter_700Bold', fontSize: 34, letterSpacing: -1.5 },
+  panelTitle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
+  note: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 17 },
+  legs: { gap: 12 },
+  leg: { alignItems: 'flex-start', flexDirection: 'row', gap: 14 },
+  legTime: { fontFamily: 'Inter_700Bold', fontSize: 15, width: 46 },
+  stayRow: { alignItems: 'center', flexDirection: 'row', gap: 11 },
+  stayActions: { flexDirection: 'row', gap: 6 },
+  cardIcon: { alignItems: 'center', borderRadius: 12, height: 40, justifyContent: 'center', width: 40 },
+  cardCopy: { flex: 1, gap: 2 },
+  cardTitle: { fontFamily: 'Inter_700Bold', fontSize: 14 },
+  stayPrice: { fontFamily: 'Inter_700Bold', fontSize: 14 },
+  iconButton: { alignItems: 'center', borderRadius: 11, height: 34, justifyContent: 'center', width: 34 },
+  moreButton: { alignItems: 'center', flexDirection: 'row', gap: 5, justifyContent: 'center', paddingVertical: 4 },
+  actionButton: { alignItems: 'center', borderRadius: 15, flex: 1, flexDirection: 'row', gap: 8, justifyContent: 'center', minHeight: 46 },
+  actionText: { fontFamily: 'Inter_700Bold', fontSize: 13 },
+  phraseBox: { borderRadius: 15, gap: 3, padding: 12 },
+  phrase: { fontFamily: 'Inter_700Bold', fontSize: 15 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  chip: { alignItems: 'center', borderRadius: 13, flexDirection: 'row', gap: 5, paddingHorizontal: 12, paddingVertical: 8 },
+  chipText: { fontFamily: 'Inter_700Bold', fontSize: 11 },
+  loadingRow: { alignItems: 'center', flexDirection: 'row', gap: 12 },
   locationPrompt: { alignItems: 'center', borderRadius: 18, flexDirection: 'row', gap: 11, padding: 15 },
   locationPromptText: { flex: 1, fontFamily: 'Inter_600SemiBold', fontSize: 13 },
-  loadingBox: { alignItems: 'center', borderRadius: 18, borderWidth: 1, flexDirection: 'row', gap: 12, padding: 16 },
-  disclaimer: { fontFamily: 'Inter_400Regular', fontSize: 11, lineHeight: 16 },
 });

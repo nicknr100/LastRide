@@ -5,12 +5,13 @@
 import { readDataFile, writeDataFileSoon } from "./cache";
 import { logger } from "./logger";
 
-export type Provider = "ekispert" | "navitime-transport" | "navitime-route-car" | "navitime-spot";
+export type Provider = "ekispert" | "navitime-transport" | "navitime-route-car" | "navitime-route-walk" | "navitime-spot";
 
 /** Free-plan monthly allowances; RapidAPI Basic plans stop at 500 calls a month per API. */
 export const MONTHLY_LIMITS: Partial<Record<Provider, number>> = {
   "navitime-transport": 500,
   "navitime-route-car": 500,
+  "navitime-route-walk": 500,
   "navitime-spot": 500,
 };
 

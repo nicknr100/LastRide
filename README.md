@@ -1,5 +1,40 @@
 # LastRide
 
+**LastRide (帰り時) tells people out at night in Japan when they need to start
+walking to catch the last train home — and what to do if they miss it.**
+
+Set your home station once. From then on the app finds the stations near you,
+works out the walking time to each, looks up tonight's last train home from
+each one, and shows a single leave-by time: the last train's departure minus
+the walk minus a few minutes to get from the entrance to the platform. As you
+move during the evening the plan follows you, and reminders are rescheduled.
+
+- **Leave screen** — leave-by time, a live countdown, the route home (lines,
+  transfers, arrival, fare), and the other nearby stations, any of which you can
+  switch to for the night.
+- **Reminders** — at the intervals you choose before leave-by, again when it's
+  time to go, and once more just after the last train has gone, in case you
+  missed it. They run while night-out tracking is on, which switches itself off
+  once the night's alerts are done.
+- **If missed** — the first train and its route, a taxi estimate with regional
+  late-night rates, walking home when it's close, and net cafés, karaoke,
+  capsule hotels and hotels nearby, compared by what you'd pay and when you'd
+  get home.
+- Japanese and English throughout, including romanized station and line names.
+
+Times come from [駅すぱあと API](https://api-info.ekispert.com/) (real
+timetables, including weekends and holidays) and stations, walking routes, taxi
+estimates and places from [NAVITIME](https://api-sdk.navitime.co.jp/api/) via
+RapidAPI. Both are called by the API server in this repo, never by the app, so
+the keys stay off people's phones and answers are cached. Without a server the
+app falls back to free OpenStreetMap services and clearly-labelled sample train
+times.
+
+**Layout:** `artifacts/last-ride` is the Expo (React Native) app,
+`artifacts/api-server` the Express API server, and `lib/` holds the OpenAPI spec
+plus the client and validators generated from it. See `replit.md` for how to run
+everything and which environment variables are needed.
+
 ## Tests
 
 ```bash

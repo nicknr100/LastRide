@@ -5,6 +5,7 @@ import stationsRouter from "./stations";
 import taxiRouter from "./taxi";
 import trainsRouter from "./trains";
 import usageRouter from "./usage";
+import walkRouter from "./walk";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(stationsRouter);
 router.use(taxiRouter);
 router.use(placesRouter);
 router.use(usageRouter);
+router.use(walkRouter);
 
 export default router;

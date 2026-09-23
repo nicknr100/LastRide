@@ -14,5 +14,10 @@ export interface TrainRoute {
   arrivesAt: string;
   /** Number of changes between trains */
   transfers: number;
+  /**
+     * One-way fare including express charges, in yen; null when unknown
+     * @nullable
+     */
+  fareYen: number | null;
   legs: TrainLeg[];
 }

@@ -16,6 +16,8 @@ tags:
     description: Station lookups
   - name: taxi
     description: Taxi estimates
+  - name: walk
+    description: Walking routes
   - name: places
     description: Places to wait for the first train
   - name: usage
@@ -163,6 +165,32 @@ paths:
           description: No driving route
         "502":
           description: Routing provider unavailable
+  /walk:
+    get:
+      operationId: getWalkRoute
+      tags: [walk]
+      summary: Walking route
+      description: Walking distance and time along the pedestrian network, at the given pace.
+      parameters:
+        - $ref: "#/components/parameters/FromLat"
+        - $ref: "#/components/parameters/FromLon"
+        - $ref: "#/components/parameters/ToLat"
+        - $ref: "#/components/parameters/ToLon"
+        - name: pace
+          in: query
+          required: true
+          schema: { type: string, enum: [relaxed, normal, fast] }
+      responses:
+        "200":
+          description: Walking route
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalkRoute"
+        "404":
+          description: No walking route
+        "502":
+          description: Routing provider unavailable
   /places/nearby:
     get:
       operationId: getNearbyPlaces
@@ -248,11 +276,14 @@ components:
         transfers:
           type: number
           description: Number of changes between trains
+        fareYen:
+          type: [number, "null"]
+          description: One-way fare including express charges, in yen; null when unknown
         legs:
           type: array
           items:
             $ref: "#/components/schemas/TrainLeg"
-      required: [departsAt, arrivesAt, transfers, legs]
+      required: [departsAt, arrivesAt, transfers, fareYen, legs]
     Station:
       type: object
       properties:
@@ -312,6 +343,14 @@ components:
           type: boolean
           description: Present only when opening hours are known
       required: [name, kind, latitude, longitude, distanceMeters]
+    WalkRoute:
+      type: object
+      properties:
+        distanceMeters:
+          type: number
+        minutes:
+          type: number
+      required: [distanceMeters, minutes]
     TaxiEstimate:
       type: object
       properties:

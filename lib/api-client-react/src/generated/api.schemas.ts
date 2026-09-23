@@ -24,6 +24,11 @@ export interface TrainRoute {
   arrivesAt: string;
   /** Number of changes between trains */
   transfers: number;
+  /**
+     * One-way fare including express charges, in yen; null when unknown
+     * @nullable
+     */
+  fareYen: number | null;
   legs: TrainLeg[];
 }
 
@@ -73,6 +78,11 @@ export interface Place {
   phone?: string;
   /** Present only when opening hours are known */
   open24h?: boolean;
+}
+
+export interface WalkRoute {
+  distanceMeters: number;
+  minutes: number;
 }
 
 export interface TaxiEstimate {
@@ -183,6 +193,23 @@ toLon: ToLonParameter;
  */
 startTime: string;
 };
+
+export type GetWalkRouteParams = {
+fromLat: FromLatParameter;
+fromLon: FromLonParameter;
+toLat: ToLatParameter;
+toLon: ToLonParameter;
+pace: GetWalkRoutePace;
+};
+
+export type GetWalkRoutePace = typeof GetWalkRoutePace[keyof typeof GetWalkRoutePace];
+
+
+export const GetWalkRoutePace = {
+  relaxed: 'relaxed',
+  normal: 'normal',
+  fast: 'fast',
+} as const;
 
 export type GetNearbyPlacesParams = {
 lat: number;

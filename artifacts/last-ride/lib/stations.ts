@@ -5,7 +5,7 @@
  * Stations and walking times come from the LastRide API server (NAVITIME) when
  * it is available, falling back to free OpenStreetMap services otherwise.
  */
-import { getNearbyStations } from '@workspace/api-client-react';
+import { getNearbyStations, getWalkRoute } from '@workspace/api-client-react';
 import { apiBaseUrl } from '@/lib/api';
 
 export type Coordinates = { latitude: number; longitude: number };
@@ -148,9 +148,20 @@ function distinctStations(coordinates: Coordinates, elements: OverpassElement[],
   return collapseByName(candidates, limit);
 }
 
-/** Walking distance and time along streets, falling back to a straight-line estimate. */
+/**
+ * Walking distance and time: from the API server (NAVITIME) when available,
+ * then the free OpenStreetMap router, then a straight-line estimate.
+ */
 export async function walkingRoute(from: Coordinates, to: Coordinates, walkingSpeed: WalkingSpeed): Promise<WalkingRoute> {
   const multiplier = SPEED_MULTIPLIER[walkingSpeed];
+  if (apiBaseUrl) {
+    try {
+      const route = await getWalkRoute({ fromLat: from.latitude, fromLon: from.longitude, toLat: to.latitude, toLon: to.longitude, pace: walkingSpeed });
+      return { distanceMeters: route.distanceMeters, walkingMinutes: Math.max(1, route.minutes) };
+    } catch {
+      // Fall through to the free services below.
+    }
+  }
   try {
     const response = await fetch(
       `https://routing.openstreetmap.de/routed-foot/route/v1/driving/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?overview=false&alternatives=false&steps=false`,

@@ -28,7 +28,7 @@ export type TrainLeg = {
   departsAt: string;
   arrivesAt: string;
 };
-export type TrainRoute = { departsAt: string; arrivesAt: string; transfers: number; legs: TrainLeg[] };
+export type TrainRoute = { departsAt: string; arrivesAt: string; transfers: number; fareYen: number | null; legs: TrainLeg[] };
 
 function apiKey(): string {
   const key = process.env["EKISPERT_KEY"];
@@ -126,7 +126,21 @@ type EkispertLine = {
   DepartureState?: { Datetime?: { text: string } };
   ArrivalState?: { Datetime?: { text: string } };
 };
+/** Ekispert prices: "Fare" is the base ticket, "Charge" the express/reserved-seat extras. */
+type EkispertPrice = { kind?: string; Oneway?: string; selected?: string };
+
+/** One-way total a passenger actually pays: base fare plus the selected charges. */
+function onewayFare(course: EkispertCourse): number | null {
+  const prices = list(course.Price);
+  const summary = (kind: string) => Number(prices.find((price) => price.kind === kind)?.Oneway ?? NaN);
+  const fare = summary("FareSummary");
+  if (!Number.isFinite(fare)) return null;
+  const charge = summary("ChargeSummary");
+  return fare + (Number.isFinite(charge) ? charge : 0);
+}
+
 type EkispertCourse = {
+  Price?: EkispertPrice | EkispertPrice[];
   Route: { transferCount?: string; Line: EkispertLine | EkispertLine[]; Point: Array<{ Station?: { Name: string; Yomi?: string }; Name?: string }> };
 };
 
@@ -158,12 +172,13 @@ function toTrainRoute(course: EkispertCourse): TrainRoute | null {
     departsAt: legs[0].departsAt,
     arrivesAt: legs[legs.length - 1].arrivesAt,
     transfers: Number(course.Route.transferCount ?? legs.length - 1),
+    fareYen: onewayFare(course),
     legs,
   };
 }
 
 // Bump the cache name when TrainRoute changes shape, so stale entries are ignored.
-const routes = new TtlCache<TrainRoute | null>(ROUTE_TTL_MS, "ekispert-routes-v2");
+const routes = new TtlCache<TrainRoute | null>(ROUTE_TTL_MS, "ekispert-routes-v3");
 
 /**
  * Last or first train between two stations on a service date (YYYYMMDD).

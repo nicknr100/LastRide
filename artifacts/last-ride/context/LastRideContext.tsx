@@ -33,6 +33,8 @@ type RideContextValue = {
   lastTrain: string;
   lastTrainSource: TrainTime['source'] | null;
   firstTrain: string;
+  /** Full first-train route (legs, fare, arrival) for the "if missed" screen. */
+  firstTrainRoute: TrainTime | null;
   /** Minutes until leave-by (negative once passed), null before a plan exists. */
   minutesUntilLeave: number | null;
   minutesUntilFirstTrain: number | null;
@@ -587,6 +589,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       lastTrain: plan ? formatJstTime(plan.lastTrain.departsAt) : '--:--',
       lastTrainSource: plan?.lastTrain.source ?? null,
       firstTrain: firstTrain ? formatJstTime(firstTrain.departsAt) : '--:--',
+      firstTrainRoute: firstTrain,
       minutesUntilLeave: plan ? minutesUntil(plan.leaveByMs, nowMs) : null,
       minutesUntilFirstTrain: firstTrain ? Math.max(0, Math.ceil((firstTrain.departsAt - nowMs) / MINUTE_MS)) : null,
       status: plan ? rideStatus(plan, nowMs) : null,

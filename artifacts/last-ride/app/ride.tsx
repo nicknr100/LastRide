@@ -28,8 +28,18 @@ function statusText(status: RideStatus, minutesLeft: number, lastTrain: string, 
 
 function copy(language: 'ja' | 'en') {
   return language === 'ja'
-    ? { greeting: '今夜の帰り道', nearby: '現在地の近く', walk: '徒歩', leave: '出発する目安', last: '終電', destination: '行き先', set: '予定を調整', location: '位置情報を使う', locationHelp: '最寄り駅と徒歩時間を正確にします', sample: 'サンプルの時刻です', sampleHelp: '時刻表データはまだ接続されていません。表示中の終電時刻は仮の値で、実際のダイヤではありません。' }
-    : { greeting: 'Your way home tonight', nearby: 'Near your location', walk: 'walk', leave: 'Suggested leave-by', last: 'Last train', destination: 'Destination', set: 'Adjust plan', location: 'Use my location', locationHelp: 'Find your closest station and walking time.', sample: 'Sample train times', sampleHelp: 'Live timetables aren’t connected yet. The last train shown is a placeholder, not a real schedule.' };
+    ? { greeting: '今夜の帰り道', walk: '徒歩', leave: '出発する目安', location: '位置情報を使う', locationHelp: '最寄り駅と徒歩時間を正確にします', sample: 'サンプルの時刻です', sampleHelp: '時刻表データはまだ接続されていません。表示中の終電時刻は仮の値で、実際のダイヤではありません。' }
+    : { greeting: 'Your way home tonight', walk: 'walk', leave: 'Leave by', location: 'Use my location', locationHelp: 'Find your closest station and walking time.', sample: 'Sample train times', sampleHelp: 'Live timetables aren’t connected yet. The last train shown is a placeholder, not a real schedule.' };
+}
+
+/** One stop on the journey strip: a time with a label under it. */
+function Stop({ time, label, color, labelColor, align = 'flex-start' }: { time: string; label: string; color: string; labelColor: string; align?: 'flex-start' | 'center' | 'flex-end' }) {
+  return (
+    <View style={{ alignItems: align, gap: 2 }}>
+      <Text style={[styles.stopTime, { color }]}>{time}</Text>
+      <Text style={[styles.stopLabel, { color: labelColor }]}>{label}</Text>
+    </View>
+  );
 }
 
 export default function RideScreen() {
@@ -38,10 +48,14 @@ export default function RideScreen() {
   const { language, plan, setPinnedStation, homeStation, stationName, stationNameJa, destination, leaveBy, lastTrain, lastTrainSource, minutesUntilLeave, status, walkingMinutes, walkingDistanceMeters, isLocationReady, isLocating, locationError, requestLocation, currentTime, demoActive, trackingMode, startTracking, stopTracking } = useLastRide();
   const ja = language === 'ja';
   const text = copy(language ?? 'en');
+  const station = ja ? stationNameJa : stationName;
 
   useEffect(() => {
     if (homeStation && !isLocationReady && !isLocating && !locationError) void requestLocation();
   }, [homeStation, isLocationReady, isLocating, locationError, requestLocation]);
+
+  const statusColor = status === 'hurry' ? colors.destructive : status === 'departed' ? colors.mutedForeground : status === 'relaxed' ? colors.secondary : colors.primary;
+  const statusTextColor = status === 'relaxed' ? colors.secondaryForeground : status === 'soon' || status === 'now' ? colors.primaryForeground : colors.card;
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -50,11 +64,15 @@ export default function RideScreen() {
           <View style={styles.brand}><RailwayMark size={23} /><Text style={[styles.brandText, { color: colors.foreground }]}>LastRide</Text></View>
           <Pressable onPress={() => router.push('/settings')} testID="open-settings" hitSlop={12} accessibilityRole="button" accessibilityLabel={ja ? '設定' : 'Settings'}><Feather name="sliders" color={colors.foreground} size={21} /></Pressable>
         </View>
+
         <View style={styles.intro}>
           <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>{currentTime} · {text.greeting}{demoActive ? (ja ? ' · デモ時刻' : ' · demo clock') : ''}</Text>
-          <Text style={[styles.station, { color: colors.foreground }]}>{ja ? stationNameJa : stationName}</Text>
-          <Text style={[styles.nearby, { color: colors.mutedForeground }]}>{isLocating ? (ja ? '現在地から最寄り駅を検索中…' : 'Finding your closest station…') : walkingMinutes ? (ja ? `${text.nearby} · ${text.walk}${walkingMinutes}分` : `${text.nearby} · ${walkingMinutes} min ${text.walk}`) : text.nearby}</Text>
-          <Text style={[styles.routeLine, { color: colors.secondaryForeground }]}>{ja ? `${stationNameJa} から ${destination} 方面` : `${stationName} → ${destination}`}</Text>
+          <Text style={[styles.station, { color: colors.foreground }]}>{station}</Text>
+          <Text style={[styles.nearby, { color: colors.mutedForeground }]}>
+            {isLocating
+              ? ja ? '現在地から最寄り駅を検索中…' : 'Finding your closest station…'
+              : [walkingMinutes ? (ja ? `${text.walk}${walkingMinutes}分` : `${walkingMinutes} min ${text.walk}`) : null, destination ? (ja ? `${destination}へ` : `to ${destination}`) : null].filter(Boolean).join(' · ')}
+          </Text>
         </View>
 
         {plan?.pinned && (() => {
@@ -63,144 +81,189 @@ export default function RideScreen() {
           return (
             <View style={[styles.pinnedBanner, { backgroundColor: colors.secondary }]}>
               <Feather name="map-pin" color={colors.primary} size={18} />
-              <View style={styles.trackCopy}>
-                <Text style={[styles.locationTitle, { color: colors.secondaryForeground }]}>{ja ? `${stationNameJa}を選択中` : `You picked ${stationName}`}</Text>
-                <Text style={[styles.locationBody, { color: gain >= 5 ? colors.destructive : colors.mutedForeground }]}>
+              <View style={styles.flex}>
+                <Text style={[styles.rowTitle, { color: colors.secondaryForeground }]}>{ja ? `${station}を選択中` : `You picked ${station}`}</Text>
+                <Text style={[styles.note, { color: gain >= 5 ? colors.destructive : colors.mutedForeground }]}>
                   {gain >= 5
                     ? ja ? `自動なら${autoName}で${gain}分遅く出られます。` : `${autoName} would give you ${gain} more minutes.`
                     : ja ? '自動での駅の切り替えは止まっています。' : 'Automatic station switching is paused.'}
                 </Text>
               </View>
-              <Pressable testID="back-to-auto" onPress={() => setPinnedStation(null)} accessibilityRole="button" style={({ pressed }) => [styles.autoButton, { backgroundColor: colors.foreground, opacity: pressed ? 0.8 : 1 }]}>
-                <Text style={[styles.autoButtonText, { color: colors.card }]}>{ja ? '自動に戻す' : 'Back to auto'}</Text>
+              <Pressable testID="back-to-auto" onPress={() => setPinnedStation(null)} accessibilityRole="button" style={({ pressed }) => [styles.smallButton, { backgroundColor: colors.foreground, opacity: pressed ? 0.8 : 1 }]}>
+                <Text style={[styles.smallButtonText, { color: colors.card }]}>{ja ? '自動に戻す' : 'Back to auto'}</Text>
               </Pressable>
             </View>
           );
         })()}
 
-        <View style={[styles.countdownCard, { backgroundColor: colors.foreground }]}>
-          <View style={styles.cardTop}><Text style={[styles.cardCaption, { color: colors.primary }]}>{text.leave}</Text><Feather name="clock" color={colors.primary} size={18} /></View>
-          <Text style={[styles.leaveTime, { color: colors.card }]}> {leaveBy}</Text>
-          <View style={styles.timeline}><View style={[styles.line, { backgroundColor: colors.mutedForeground }]} /><View style={[styles.dot, { backgroundColor: colors.primary }]} /><View style={[styles.dot, styles.finish, { backgroundColor: colors.card }]} /></View>
-          <View style={styles.timeLabels}><Text style={[styles.label, { color: colors.muted }]}>{ja ? '現在地から' : 'From your location'}</Text><Text style={[styles.label, { color: colors.muted }]}>{lastTrain} {text.last}{lastTrainSource === 'sample' ? (ja ? '（仮）' : ' (sample)') : ''}</Text></View>
-          {status && minutesUntilLeave !== null && (
-            <View style={[styles.statusPill, { backgroundColor: status === 'hurry' ? colors.destructive : status === 'departed' ? colors.mutedForeground : status === 'relaxed' ? colors.secondaryForeground : colors.primary }]}>
-              <Feather name={status === 'hurry' ? 'alert-triangle' : status === 'departed' ? 'moon' : status === 'relaxed' ? 'clock' : 'bell'} size={14} color={status === 'soon' || status === 'now' ? colors.primaryForeground : colors.card} />
-              <Text style={[styles.statusText, { color: status === 'soon' || status === 'now' ? colors.primaryForeground : colors.card }]}>{statusText(status, minutesUntilLeave, lastTrain, ja)}</Text>
-            </View>
-          )}
+        {/* Tonight at a glance: when to leave, and the two times that follow from it */}
+        <View style={[styles.hero, { backgroundColor: colors.foreground }]}>
+          <View style={styles.heroTop}>
+            <Text style={[styles.heroLabel, { color: colors.primary }]}>{text.leave}</Text>
+            {status && minutesUntilLeave !== null && (
+              <View style={[styles.statusPill, { backgroundColor: statusColor }]}>
+                <Feather name={status === 'hurry' ? 'alert-triangle' : status === 'departed' ? 'moon' : status === 'relaxed' ? 'clock' : 'bell'} size={13} color={statusTextColor} />
+                <Text style={[styles.statusText, { color: statusTextColor }]}>{statusText(status, minutesUntilLeave, lastTrain, ja)}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.leaveTime, { color: colors.card }]}>{leaveBy}</Text>
+          <View style={[styles.strip, { borderTopColor: colors.mutedForeground }]}>
+            <Stop
+              time={walkingMinutes ? (ja ? `徒歩${walkingMinutes}分` : `${walkingMinutes} min`) : '—'}
+              label={ja ? '駅まで歩く' : 'walk to station'}
+              color={colors.primary}
+              labelColor={colors.muted}
+            />
+            <Stop
+              time={`${lastTrain}${lastTrainSource === 'sample' ? (ja ? '（仮）' : '*') : ''}`}
+              label={ja ? `${station}発` : `${station} dep.`}
+              color={colors.card}
+              labelColor={colors.muted}
+              align="center"
+            />
+            <Stop
+              time={plan?.lastTrain.arrivesAt ? formatJstTime(plan.lastTrain.arrivesAt) : '--:--'}
+              label={ja ? `${destination}着` : `${destination} arr.`}
+              color={colors.card}
+              labelColor={colors.muted}
+              align="flex-end"
+            />
+          </View>
         </View>
 
         {status === 'departed' && (
-          <Pressable testID="missed-prompt" onPress={() => router.replace('/alternatives')} accessibilityRole="button" style={({ pressed }) => [styles.trackButton, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}>
+          <Pressable testID="missed-prompt" onPress={() => router.replace('/alternatives')} accessibilityRole="button" style={({ pressed }) => [styles.promptRow, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}>
             <Feather name="compass" color={colors.primaryForeground} size={18} />
-            <View style={styles.trackCopy}>
-              <Text style={[styles.locationTitle, { color: colors.primaryForeground }]}>{ja ? '終電に間に合いませんでしたか？' : 'Missed the last train?'}</Text>
-              <Text style={[styles.locationBody, { color: colors.primaryForeground }]}>{ja ? '始発・タクシー・近くで朝まで過ごせる場所を見る' : 'See the first train, a taxi, and places to stay nearby'}</Text>
+            <View style={styles.flex}>
+              <Text style={[styles.rowTitle, { color: colors.primaryForeground }]}>{ja ? '終電に間に合いませんでしたか？' : 'Missed the last train?'}</Text>
+              <Text style={[styles.note, { color: colors.primaryForeground }]}>{ja ? '始発・タクシー・近くで朝まで過ごせる場所を見る' : 'See the first train, a taxi, and places to stay nearby'}</Text>
             </View>
             <Feather name="chevron-right" color={colors.primaryForeground} size={18} />
           </Pressable>
         )}
 
         {plan?.lastTrain.legs && plan.lastTrain.legs.length > 0 && (
-          <View style={[styles.routeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.routeHeader}>
-              <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{ja ? '終電のルート' : 'Last train route'}</Text>
-              <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>
-                {plan.lastTrain.transfers ? (ja ? `乗換${plan.lastTrain.transfers}回` : `${plan.lastTrain.transfers} transfer${plan.lastTrain.transfers > 1 ? 's' : ''}`) : ja ? '乗換なし' : 'Direct'}
+          <View style={styles.section}>
+            <View style={styles.sectionHead}>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{ja ? '終電のルート' : 'LAST TRAIN'}</Text>
+              <Text style={[styles.note, { color: colors.mutedForeground }]}>
+                {[
+                  plan.lastTrain.transfers ? (ja ? `乗換${plan.lastTrain.transfers}回` : `${plan.lastTrain.transfers} transfer${plan.lastTrain.transfers > 1 ? 's' : ''}`) : ja ? '乗換なし' : 'Direct',
+                  plan.lastTrain.fareYen ? `¥${plan.lastTrain.fareYen.toLocaleString('en-US')}` : null,
+                ].filter(Boolean).join(' · ')}
               </Text>
             </View>
-            {plan.lastTrain.legs.map((leg) => (
-              <View key={`${leg.line}-${leg.departsAt}`} style={styles.leg}>
-                <Text style={[styles.legTime, { color: colors.foreground }]}>{formatJstTime(leg.departsAt)}</Text>
-                <View style={styles.legCopy}>
-                  <Text style={[styles.detailValue, { color: colors.foreground }]}>{ja ? `${leg.from} → ${leg.to}` : `${leg.fromEn ?? leg.from} → ${leg.toEn ?? leg.to}`}</Text>
-                  <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{ja ? shortLineName(leg.line) : (leg.lineEn ?? shortLineName(leg.line))}</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {plan.lastTrain.legs.map((leg) => (
+                <View key={`${leg.line}-${leg.departsAt}`} style={styles.leg}>
+                  <Text style={[styles.legTime, { color: colors.foreground }]}>{formatJstTime(leg.departsAt)}</Text>
+                  <View style={styles.flex}>
+                    <Text style={[styles.rowTitle, { color: colors.foreground }]}>{ja ? `${leg.from} → ${leg.to}` : `${leg.fromEn ?? leg.from} → ${leg.toEn ?? leg.to}`}</Text>
+                    <Text style={[styles.note, { color: colors.mutedForeground }]}>{ja ? shortLineName(leg.line) : (leg.lineEn ?? shortLineName(leg.line))}</Text>
+                  </View>
                 </View>
-              </View>
-            ))}
-            {plan.lastTrain.arrivesAt && (
-              <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{ja ? `${destination}着 ${formatJstTime(plan.lastTrain.arrivesAt)}` : `Arrives ${destination} ${formatJstTime(plan.lastTrain.arrivesAt)}`}</Text>
-            )}
+              ))}
+            </View>
           </View>
         )}
 
         {plan && (plan.alternatives ?? []).length > 0 && (
-          <View style={[styles.routeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{ja ? 'ほかの駅から帰る場合' : 'Other stations nearby'}</Text>
-            {plan.alternatives.map((option) => {
-              const isAutoPick = plan.pinned && option.station.nameJa === plan.autoPick.station.nameJa;
-              const name = ja ? option.station.nameJa : option.station.name;
-              return (
-                <Pressable
-                  key={option.station.nameJa}
-                  testID={`use-station-${option.station.nameJa}`}
-                  onPress={() => setPinnedStation(isAutoPick ? null : option.station)}
-                  accessibilityRole="button"
-                  accessibilityLabel={ja ? `${name}から帰る` : `Leave from ${name} instead`}
-                  style={({ pressed }) => [styles.leg, styles.altRow, { opacity: pressed ? 0.6 : 1 }]}
-                >
-                  <Text style={[styles.legTime, { color: colors.foreground }]}>{formatJstTime(option.leaveByMs)}</Text>
-                  <View style={styles.legCopy}>
-                    <Text style={[styles.detailValue, { color: colors.foreground }]}>
-                      {name}
-                      {isAutoPick ? <Text style={[styles.detailLabel, { color: colors.primary }]}>{ja ? '  自動のおすすめ' : '  Automatic pick'}</Text> : null}
-                    </Text>
-                    <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>
-                      {ja ? `徒歩${option.walkingMinutes}分 · 終電 ${formatJstTime(option.lastTrain.departsAt)}` : `${option.walkingMinutes} min walk · last train ${formatJstTime(option.lastTrain.departsAt)}`}
-                    </Text>
-                  </View>
-                  <Feather name="repeat" color={colors.mutedForeground} size={16} />
-                </Pressable>
-              );
-            })}
-            <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>
-              {ja
-                ? '時刻は出発する目安です。タップするとその駅に切り替えます。自動では、10分以上遅く出られる場合のみ遠い駅を選びます。'
-                : 'Times are when to leave. Tap a station to switch to it. On automatic, a farther station is only chosen if it gives you 10+ more minutes.'}
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{ja ? 'ほかの駅から' : 'OTHER STATIONS'}</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {plan.alternatives.map((option) => {
+                const isAutoPick = plan.pinned && option.station.nameJa === plan.autoPick.station.nameJa;
+                const name = ja ? option.station.nameJa : option.station.name;
+                return (
+                  <Pressable
+                    key={option.station.nameJa}
+                    testID={`use-station-${option.station.nameJa}`}
+                    onPress={() => setPinnedStation(isAutoPick ? null : option.station)}
+                    accessibilityRole="button"
+                    accessibilityLabel={ja ? `${name}から帰る` : `Leave from ${name} instead`}
+                    style={({ pressed }) => [styles.leg, { opacity: pressed ? 0.6 : 1 }]}
+                  >
+                    <Text style={[styles.legTime, { color: colors.foreground }]}>{formatJstTime(option.leaveByMs)}</Text>
+                    <View style={styles.flex}>
+                      <Text style={[styles.rowTitle, { color: colors.foreground }]}>
+                        {name}
+                        {isAutoPick ? <Text style={[styles.note, { color: colors.primary }]}>{ja ? '  自動のおすすめ' : '  Automatic pick'}</Text> : null}
+                      </Text>
+                      <Text style={[styles.note, { color: colors.mutedForeground }]}>
+                        {ja ? `徒歩${option.walkingMinutes}分 · 終電 ${formatJstTime(option.lastTrain.departsAt)}` : `${option.walkingMinutes} min walk · last train ${formatJstTime(option.lastTrain.departsAt)}`}
+                      </Text>
+                    </View>
+                    <Feather name="repeat" color={colors.mutedForeground} size={16} />
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={[styles.note, { color: colors.mutedForeground }]}>
+              {ja ? 'タップでその駅に切り替えます。自動では10分以上早く出られる場合のみ遠い駅を選びます。' : 'Tap to switch. On automatic, a farther station is only chosen if it gives you 10+ more minutes.'}
             </Text>
           </View>
         )}
 
-        <View style={styles.details}>
-          <Pressable onPress={() => router.push('/settings')} style={[styles.detailCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.iconChip, { backgroundColor: colors.secondary }]}><Feather name="home" color={colors.secondaryForeground} size={18} /></View>
-            <View style={styles.detailCopy}><Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{text.destination}</Text><Text style={[styles.detailValue, { color: colors.foreground }]}>{destination}</Text></View>
-            <Feather name="edit-3" color={colors.mutedForeground} size={17} />
+        {/* Where you're heading, and how far you have to walk */}
+        <View style={[styles.factsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Pressable style={styles.fact} onPress={() => router.push('/home-station')} testID="edit-destination" accessibilityRole="button">
+            <Text style={[styles.factLabel, { color: colors.mutedForeground }]}>{ja ? '行き先' : 'Destination'}</Text>
+            <View style={styles.factValueRow}>
+              <Text style={[styles.factValue, { color: colors.foreground }]} numberOfLines={1}>{destination || '—'}</Text>
+              <Feather name="edit-3" color={colors.mutedForeground} size={14} />
+            </View>
           </Pressable>
-          <View style={[styles.detailCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.iconChip, { backgroundColor: colors.secondary }]}><Feather name="map-pin" color={colors.secondaryForeground} size={18} /></View>
-            <View style={styles.detailCopy}><Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{ja ? '徒歩距離' : 'Walking distance'}</Text><Text style={[styles.detailValue, { color: colors.foreground }]}>{walkingDistanceMeters ? `${(walkingDistanceMeters / 1000).toFixed(1)} km · ${ja ? `${walkingMinutes}分` : `${walkingMinutes} min`}` : isLocating ? (ja ? '計算中…' : 'Calculating…') : '—'}</Text></View>
-            <Feather name="crosshair" color={colors.primary} size={18} />
+          <View style={[styles.factDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.fact}>
+            <Text style={[styles.factLabel, { color: colors.mutedForeground }]}>{ja ? '駅まで' : 'To the station'}</Text>
+            <Text style={[styles.factValue, { color: colors.foreground }]}>
+              {walkingDistanceMeters
+                ? `${(walkingDistanceMeters / 1000).toFixed(1)} km · ${ja ? `${walkingMinutes}分` : `${walkingMinutes} min`}`
+                : isLocating ? (ja ? '計算中…' : 'Calculating…') : '—'}
+            </Text>
           </View>
         </View>
 
-        {/* After the last train there is nothing left to track, so only show the stop button if it's still on. */}
         {isLocationReady && (status !== 'departed' || trackingMode !== null) && (
           trackingMode === null ? (
-            <Pressable testID="start-tracking" onPress={() => void startTracking()} style={({ pressed }) => [styles.trackButton, { backgroundColor: colors.foreground, opacity: pressed ? 0.85 : 1 }]}>
-              <Feather name="navigation" color={colors.primary} size={18} />
-              <View style={styles.trackCopy}>
-                <Text style={[styles.locationTitle, { color: colors.card }]}>{ja ? '夜のトラッキングを開始' : 'Start night-out tracking'}</Text>
-                <Text style={[styles.locationBody, { color: colors.muted }]}>{ja ? '出発リマインダーをオンにして、移動に合わせて最寄り駅と出発時刻を更新します。終電のあとは自動でオフになります。' : 'Turns on leave reminders and keeps your station and leave-by time up to date as you move. Switches off by itself after the last train.'}</Text>
+            <Pressable testID="start-tracking" onPress={() => void startTracking()} accessibilityRole="button" style={({ pressed }) => [styles.trackRow, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.85 : 1 }]}>
+              <Feather name="navigation" color={colors.secondaryForeground} size={18} />
+              <View style={styles.flex}>
+                <Text style={[styles.rowTitle, { color: colors.foreground }]}>{ja ? '夜のトラッキング' : 'Night-out tracking'}</Text>
+                <Text style={[styles.note, { color: colors.mutedForeground }]}>{ja ? 'リマインダーをオンにし、移動に合わせて更新' : 'Reminders on, and your plan follows you'}</Text>
+              </View>
+              <View style={[styles.smallButton, { backgroundColor: colors.foreground }]}>
+                <Text style={[styles.smallButtonText, { color: colors.card }]}>{ja ? '開始' : 'Start'}</Text>
               </View>
             </Pressable>
           ) : (
-            <Pressable testID="stop-tracking" onPress={() => void stopTracking()} style={({ pressed }) => [styles.trackButton, { backgroundColor: colors.secondary, opacity: pressed ? 0.75 : 1 }]}>
-              <Feather name="navigation" color={colors.secondaryForeground} size={18} />
-              <View style={styles.trackCopy}>
-                <Text style={[styles.locationTitle, { color: colors.secondaryForeground }]}>{ja ? 'トラッキング中 — タップで停止' : 'Tracking on — tap to stop'}</Text>
-                <Text style={[styles.locationBody, { color: colors.mutedForeground }]}>
+            <Pressable testID="stop-tracking" onPress={() => void stopTracking()} accessibilityRole="button" style={({ pressed }) => [styles.trackRow, { backgroundColor: colors.secondary, borderColor: colors.secondary, opacity: pressed ? 0.8 : 1 }]}>
+              <Feather name="navigation" color={colors.primary} size={18} />
+              <View style={styles.flex}>
+                <Text style={[styles.rowTitle, { color: colors.secondaryForeground }]}>{ja ? 'トラッキング中' : 'Tracking on'}</Text>
+                <Text style={[styles.note, { color: colors.mutedForeground }]}>
                   {trackingMode === 'background'
-                    ? ja ? 'アプリを閉じても最寄り駅と通知を更新し続けます。終電のあと（遅くとも4時）に自動でオフになります。' : 'Keeps updating your station and reminders even when the app is closed. Switches off after the last train (04:00 at the latest).'
-                    : ja ? 'アプリを開いている間、移動に合わせて更新します。（バックグラウンド更新は製品版アプリで有効になります）' : 'Updates as you move while the app is open. (Background updates activate in the installed app build.)'}
+                    ? ja ? 'アプリを閉じても更新。終電後に自動で停止。' : 'Updates with the app closed; stops after the last train.'
+                    : ja ? 'アプリを開いている間だけ更新します。' : 'Updates while the app is open.'}
                 </Text>
+              </View>
+              <View style={[styles.smallButton, { backgroundColor: colors.card }]}>
+                <Text style={[styles.smallButtonText, { color: colors.secondaryForeground }]}>{ja ? '停止' : 'Stop'}</Text>
               </View>
             </Pressable>
           )
         )}
 
-        {!isLocationReady ? <Pressable testID="enable-location" onPress={() => void requestLocation()} style={({ pressed }) => [styles.locationButton, { backgroundColor: colors.secondary, opacity: pressed ? 0.7 : 1 }]}><Feather name="crosshair" color={colors.secondaryForeground} size={18} /><View><Text style={[styles.locationTitle, { color: colors.secondaryForeground }]}>{isLocating ? (ja ? '最寄り駅を検索中…' : 'Finding your closest station…') : text.location}</Text><Text style={[styles.locationBody, { color: colors.mutedForeground }]}>{locationError ? locationErrorText(locationError, ja) : text.locationHelp}</Text></View></Pressable> : plan?.pinned ? null : <Notice icon="check-circle" title={ja ? `${stationNameJa}を検出` : `${stationName} detected`} body={ja ? '現在地から最寄り駅と徒歩距離を自動計算しました。' : 'Closest station and walking distance calculated from your location.'} />}
+        {!isLocationReady && (
+          <Pressable testID="enable-location" onPress={() => void requestLocation()} accessibilityRole="button" style={({ pressed }) => [styles.trackRow, { backgroundColor: colors.secondary, borderColor: colors.secondary, opacity: pressed ? 0.7 : 1 }]}>
+            <Feather name="crosshair" color={colors.secondaryForeground} size={18} />
+            <View style={styles.flex}>
+              <Text style={[styles.rowTitle, { color: colors.secondaryForeground }]}>{isLocating ? (ja ? '最寄り駅を検索中…' : 'Finding your closest station…') : text.location}</Text>
+              <Text style={[styles.note, { color: colors.mutedForeground }]}>{locationError ? locationErrorText(locationError, ja) : text.locationHelp}</Text>
+            </View>
+          </Pressable>
+        )}
 
         {lastTrainSource === 'sample' && <Notice icon="info" title={text.sample} body={text.sampleHelp} />}
       </ScrollView>
@@ -211,45 +274,41 @@ export default function RideScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { gap: 20, paddingHorizontal: 20 },
+  content: { gap: 16, paddingHorizontal: 20 },
+  flex: { flex: 1, gap: 2 },
   topbar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   brand: { alignItems: 'center', flexDirection: 'row', gap: 7 },
   brandText: { fontFamily: 'Inter_700Bold', fontSize: 17 },
-  intro: { gap: 4, marginTop: 6 },
+  intro: { gap: 3, marginTop: 4 },
   eyebrow: { fontFamily: 'Inter_500Medium', fontSize: 13, letterSpacing: 0.2 },
   station: { fontFamily: 'Inter_700Bold', fontSize: 36, letterSpacing: -1.3 },
   nearby: { fontFamily: 'Inter_400Regular', fontSize: 14 },
-  routeLine: { fontFamily: 'Inter_600SemiBold', fontSize: 13, marginTop: 7 },
-  countdownCard: { borderRadius: 27, padding: 22 },
-  cardTop: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  cardCaption: { fontFamily: 'Inter_700Bold', fontSize: 13, letterSpacing: 0.3, textTransform: 'uppercase' },
-  leaveTime: { fontFamily: 'Inter_700Bold', fontSize: 57, letterSpacing: -2.4, lineHeight: 65, marginTop: 7 },
-  timeline: { height: 14, justifyContent: 'center', marginTop: 10, position: 'relative' },
-  line: { height: 2, width: '100%' },
-  dot: { borderRadius: 7, height: 14, left: '12%', position: 'absolute', width: 14 },
-  finish: { left: '94%' },
-  timeLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
-  label: { fontFamily: 'Inter_500Medium', fontSize: 11 },
-  statusPill: { alignItems: 'center', alignSelf: 'flex-start', borderRadius: 14, flexDirection: 'row', gap: 7, marginTop: 14, paddingHorizontal: 12, paddingVertical: 8 },
-  statusText: { fontFamily: 'Inter_700Bold', fontSize: 13 },
-  details: { gap: 10 },
-  altRow: { alignItems: 'center' },
-  pinnedBanner: { alignItems: 'center', borderRadius: 19, flexDirection: 'row', gap: 12, padding: 14 },
-  autoButton: { borderRadius: 13, paddingHorizontal: 12, paddingVertical: 9 },
-  autoButtonText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
-  routeCard: { borderRadius: 20, borderWidth: 1, gap: 12, padding: 16 },
-  routeHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  leg: { alignItems: 'flex-start', flexDirection: 'row', gap: 14 },
-  legTime: { fontFamily: 'Inter_700Bold', fontSize: 16, width: 50 },
-  legCopy: { flex: 1, gap: 2 },
-  detailCard: { alignItems: 'center', borderRadius: 20, borderWidth: 1, flexDirection: 'row', gap: 13, padding: 14 },
-  iconChip: { alignItems: 'center', borderRadius: 13, height: 42, justifyContent: 'center', width: 42 },
-  detailCopy: { flex: 1, gap: 2 },
-  detailLabel: { fontFamily: 'Inter_500Medium', fontSize: 12 },
-  detailValue: { fontFamily: 'Inter_700Bold', fontSize: 16 },
-  locationButton: { alignItems: 'center', borderRadius: 19, flexDirection: 'row', gap: 12, padding: 15 },
-  trackButton: { alignItems: 'center', borderRadius: 19, flexDirection: 'row', gap: 12, padding: 15 },
-  trackCopy: { flex: 1 },
-  locationTitle: { fontFamily: 'Inter_700Bold', fontSize: 14 },
-  locationBody: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 3 },
+  pinnedBanner: { alignItems: 'center', borderRadius: 18, flexDirection: 'row', gap: 12, padding: 14 },
+  hero: { borderRadius: 26, padding: 22 },
+  heroTop: { alignItems: 'center', flexDirection: 'row', gap: 10, justifyContent: 'space-between' },
+  heroLabel: { fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase' },
+  leaveTime: { fontFamily: 'Inter_700Bold', fontSize: 62, letterSpacing: -2.6, lineHeight: 70, marginTop: 4 },
+  statusPill: { alignItems: 'center', borderRadius: 13, flexDirection: 'row', gap: 6, paddingHorizontal: 11, paddingVertical: 7 },
+  statusText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
+  strip: { borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, paddingTop: 12 },
+  stopTime: { fontFamily: 'Inter_700Bold', fontSize: 15 },
+  stopLabel: { fontFamily: 'Inter_400Regular', fontSize: 11 },
+  promptRow: { alignItems: 'center', borderRadius: 18, flexDirection: 'row', gap: 12, padding: 15 },
+  section: { gap: 8 },
+  sectionHead: { alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between' },
+  sectionLabel: { fontFamily: 'Inter_700Bold', fontSize: 11, letterSpacing: 0.9 },
+  card: { borderRadius: 20, borderWidth: 1, gap: 14, padding: 16 },
+  leg: { alignItems: 'center', flexDirection: 'row', gap: 14 },
+  legTime: { flexShrink: 0, fontFamily: 'Inter_700Bold', fontSize: 16, width: 52 },
+  rowTitle: { fontFamily: 'Inter_700Bold', fontSize: 15 },
+  note: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 17 },
+  factsCard: { alignItems: 'center', borderRadius: 20, borderWidth: 1, flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 14 },
+  fact: { flex: 1, gap: 3 },
+  factDivider: { alignSelf: 'stretch', marginHorizontal: 14, width: 1 },
+  factLabel: { fontFamily: 'Inter_500Medium', fontSize: 11 },
+  factValueRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
+  factValue: { fontFamily: 'Inter_700Bold', fontSize: 15 },
+  trackRow: { alignItems: 'center', borderRadius: 18, borderWidth: 1, flexDirection: 'row', gap: 12, padding: 14 },
+  smallButton: { borderRadius: 12, paddingHorizontal: 13, paddingVertical: 9 },
+  smallButtonText: { fontFamily: 'Inter_700Bold', fontSize: 12 },
 });

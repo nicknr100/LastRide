@@ -21,13 +21,15 @@ import type {
   GetNearbyPlacesParams,
   GetNearbyStationsParams,
   GetTaxiEstimateParams,
+  GetWalkRouteParams,
   HealthStatus,
   Place,
   SearchStationsParams,
   Station,
   TaxiEstimate,
   TrainRoute,
-  UsageReport
+  UsageReport,
+  WalkRoute
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -547,6 +549,91 @@ export function useGetTaxiEstimate<TData = Awaited<ReturnType<typeof getTaxiEsti
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetTaxiEstimateQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetWalkRouteUrl = (params: GetWalkRouteParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/walk?${stringifiedParams}` : `/api/walk`
+}
+
+/**
+ * Walking distance and time along the pedestrian network, at the given pace.
+ * @summary Walking route
+ */
+export const getWalkRoute = async (params: GetWalkRouteParams, options?: Parameters<typeof customFetch>[1]): Promise<WalkRoute> => {
+
+  return customFetch<WalkRoute>(getGetWalkRouteUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWalkRouteQueryKey = (params?: GetWalkRouteParams,) => {
+    return [
+    `/api/walk`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetWalkRouteQueryOptions = <TData = Awaited<ReturnType<typeof getWalkRoute>>, TError = ErrorType<void>>(params: GetWalkRouteParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWalkRoute>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWalkRouteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWalkRoute>>> = ({ signal }) => getWalkRoute(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWalkRoute>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWalkRouteQueryResult = NonNullable<Awaited<ReturnType<typeof getWalkRoute>>>
+export type GetWalkRouteQueryError = ErrorType<void>
+
+
+/**
+ * @summary Walking route
+ */
+
+export function useGetWalkRoute<TData = Awaited<ReturnType<typeof getWalkRoute>>, TError = ErrorType<void>>(
+ params: GetWalkRouteParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWalkRoute>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWalkRouteQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

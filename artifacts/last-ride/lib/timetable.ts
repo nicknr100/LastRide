@@ -28,6 +28,8 @@ export type TrainTime = {
   /** Arrival at the destination, when known. */
   arrivesAt?: number;
   transfers?: number;
+  /** One-way fare including express charges, in yen. */
+  fareYen?: number | null;
   legs?: TrainLeg[];
   source: 'sample' | 'live';
 };
@@ -52,6 +54,7 @@ function toTrainTime(route: TrainRoute): TrainTime {
     departsAt: Date.parse(route.departsAt),
     arrivesAt: Date.parse(route.arrivesAt),
     transfers: route.transfers,
+    fareYen: route.fareYen,
     legs: route.legs.map((leg) => ({ ...leg, departsAt: Date.parse(leg.departsAt), arrivesAt: Date.parse(leg.arrivesAt) })),
     source: 'live',
   };

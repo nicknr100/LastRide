@@ -12,6 +12,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const HOSTS = {
   transport: "navitime-transport.p.rapidapi.com",
   car: "navitime-route-car.p.rapidapi.com",
+  walk: "navitime-route-walk.p.rapidapi.com",
   spot: "navitime-spot.p.rapidapi.com",
 } as const;
 
@@ -31,6 +32,8 @@ export type Station = {
 };
 
 export type TaxiEstimate = { distanceMeters: number; minutes: number; fareYen: number | null };
+
+export type WalkRoute = { distanceMeters: number; minutes: number };
 
 async function call<T>(host: string, path: string, params: Record<string, string>): Promise<T> {
   const key = process.env["RAPIDAPI_KEY"];
@@ -212,4 +215,28 @@ export async function nearbyPlaces(latitude: number, longitude: number): Promise
   }
   placesCache.set(cacheKey, places);
   return places;
+}
+
+type WalkRouteResponse = { items?: Array<{ summary?: { move?: { distance?: number; time?: number } } }> };
+
+const walkCache = new TtlCache<WalkRoute | null>(7 * DAY_MS, "navitime-walk");
+
+/** Walking distance and time along the pedestrian network, at the user's pace. */
+export async function walkRoute(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number },
+  pace: Pace,
+): Promise<WalkRoute | null> {
+  const cacheKey = `${from.latitude.toFixed(3)}|${from.longitude.toFixed(3)}|${to.latitude.toFixed(4)}|${to.longitude.toFixed(4)}|${pace}`;
+  const cached = walkCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+  const body = await call<WalkRouteResponse>(HOSTS.walk, "/route_walk", {
+    start: `${from.latitude},${from.longitude}`,
+    goal: `${to.latitude},${to.longitude}`,
+    speed: String(WALK_SPEED_KMH[pace]),
+  });
+  const move = body.items?.[0]?.summary?.move;
+  const route = move?.distance !== undefined && move.time !== undefined ? { distanceMeters: move.distance, minutes: move.time } : null;
+  walkCache.set(cacheKey, route);
+  return route;
 }
