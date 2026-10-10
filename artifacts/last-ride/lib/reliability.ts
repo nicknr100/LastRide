@@ -99,8 +99,11 @@ export function matchingDisruptionLines(
   const matches = new Set<string>();
   for (const routeLine of routeLines) {
     const route = normalizeLineName(routeLine);
+    // A name that normalises to nothing would "include" every incident.
+    if (!route) continue;
     for (const incident of incidents) {
       const disrupted = normalizeLineName(incident.line);
+      if (!disrupted) continue;
       if (
         route === disrupted ||
         route.includes(disrupted) ||

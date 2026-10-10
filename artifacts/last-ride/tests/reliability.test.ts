@@ -85,4 +85,14 @@ describe("disruption matching", () => {
       ]),
     ).toEqual(["ＪＲ山手線"]);
   });
+
+  test("never matches through a line name that normalises to nothing", () => {
+    const blank = {
+      lastTrain: { transfers: 0, legs: [{ line: "（臨時）" }] },
+    };
+    expect(matchingDisruptionLines(blank, [{ line: "ＪＲ山手線" }])).toEqual([]);
+    expect(
+      matchingDisruptionLines(choice(), [{ line: "（運休）" }]),
+    ).toEqual([]);
+  });
 });

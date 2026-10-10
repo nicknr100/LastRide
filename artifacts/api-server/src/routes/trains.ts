@@ -40,7 +40,10 @@ function trainHandler(
         query.date,
       );
       if (kind === "last") {
-        await recordLastTrainShadowComparison({
+        // Not awaited: the shadow engine never changes the answer, so it must
+        // not add its snapshot load or scan to the user's wait. Best-effort on
+        // Lambda, which may pause it until the next invocation.
+        void recordLastTrainShadowComparison({
           fromName: query.fromName,
           toName: query.toName,
           serviceDate: query.date,

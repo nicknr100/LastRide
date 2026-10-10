@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { trackingDisclosure } from '../lib/trackingDisclosure';
+import { resolveNightLocationMode, trackingDisclosure } from '../lib/trackingDisclosure';
 
 describe('night-tracking location disclosure', () => {
   it('explains all background location uses before requesting permission', () => {
@@ -25,5 +25,27 @@ describe('night-tracking location disclosure', () => {
 
   it('falls back to English before language setup', () => {
     expect(trackingDisclosure(null)).toEqual(trackingDisclosure('en'));
+  });
+
+  it('offers a way out without starting tracking', () => {
+    expect(trackingDisclosure('en').cancel).toBe('Cancel');
+    expect(trackingDisclosure('ja').cancel).toBe('キャンセル');
+  });
+});
+
+describe('remembered night-tracking location choice', () => {
+  it('asks until a choice is saved', () => {
+    expect(resolveNightLocationMode('ask', false)).toBe('ask');
+    expect(resolveNightLocationMode('ask', true)).toBe('ask');
+  });
+
+  it('never asks again after "only while app is open"', () => {
+    expect(resolveNightLocationMode('foreground', false)).toBe('foreground');
+  });
+
+  it('skips the disclosure for background only while the OS still allows it', () => {
+    expect(resolveNightLocationMode('background', true)).toBe('background');
+    // Revoked or never granted: the disclosure must precede the OS prompt again.
+    expect(resolveNightLocationMode('background', false)).toBe('ask');
   });
 });

@@ -14,8 +14,6 @@ import { getLastTrain, type TrainTime } from '@/lib/timetable';
 export const STATION_BUFFER_MINUTES = 3;
 const CANDIDATE_STATIONS_INITIAL = 3;
 const CANDIDATE_STATIONS_EXPANDED = 6;
-/** Search a wider station ring when the current plan is risky or time-critical. */
-const EXPAND_SEARCH_WITHIN_MINUTES = 30;
 /** While tracking, re-plan only after moving this far from the last plan, or once it is this old. */
 const REPLAN_DISTANCE_METERS = 300;
 const REPLAN_AFTER_MS = 10 * MINUTE_MS;
@@ -306,14 +304,14 @@ async function annotateDisruptions(options: StationChoice[]): Promise<StationCho
 
 /**
  * Broaden station discovery only when it can plausibly change the decision:
- * too few viable routes, a current service incident, or a deadline close
- * enough that another line is worth the extra provider work.
+ * too few viable routes, or a current service incident on one of them.
+ * Not merely because the deadline is near: that is when the app is used most,
+ * so it would double provider calls on nearly every plan, and a farther
+ * station means a longer walk exactly when there is least time for one.
  */
-export function shouldExpandStationSearch(options: StationChoice[], nowMs: number): boolean {
+export function shouldExpandStationSearch(options: StationChoice[]): boolean {
   if (options.length < 2) return true;
-  if (options.some((option) => (option.disruptionLines?.length ?? 0) > 0)) return true;
-  const bestRecommended = Math.max(...options.map((option) => recommendedLeaveTime(option)));
-  return bestRecommended - nowMs <= EXPAND_SEARCH_WITHIN_MINUTES * MINUTE_MS;
+  return options.some((option) => (option.disruptionLines?.length ?? 0) > 0);
 }
 
 /**
@@ -350,7 +348,7 @@ export async function planNight(
   let lookupFailed = firstPass.lookupFailed;
   let options = await annotateDisruptions(firstPass.options);
 
-  if (shouldExpandStationSearch(options, nowMs)) {
+  if (shouldExpandStationSearch(options)) {
     const expanded = await findNearbyStations(coordinates, walkingSpeed, CANDIDATE_STATIONS_EXPANDED).catch(() => []);
     const known = new Set(candidates.map((candidate) => candidate.station.nameJa));
     const extra = expanded.filter((candidate) => !known.has(candidate.station.nameJa));

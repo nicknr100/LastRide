@@ -71,7 +71,7 @@ export default function SettingsScreen() {
   const {
     language, homeStation, destination, walkingSpeed, setWalkingSpeed, setLanguage,
     reminderIntervals, toggleReminderInterval, notificationsAllowed,
-    missedCheckIn, setMissedCheckIn,
+    missedCheckIn, setMissedCheckIn, nightLocationMode, setNightLocationMode,
     demoActive, setDemoNow, nowMs, plan, currentTime, leaveBy, triggerTestNotification, resetAll,
   } = useLastRide();
   const ja = language === 'ja';
@@ -153,6 +153,18 @@ export default function SettingsScreen() {
               options={[
                 { value: 'ja', label: '日本語' },
                 { value: 'en', label: 'English' },
+              ]}
+            />
+          </Row>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <Row title={ja ? '夜の位置情報' : 'Night location'}>
+            <Segmented
+              value={nightLocationMode}
+              onChange={setNightLocationMode}
+              options={[
+                { value: 'ask', label: ja ? '毎回確認' : 'Ask' },
+                { value: 'foreground', label: ja ? 'アプリのみ' : 'App open' },
+                { value: 'background', label: ja ? '常に' : 'Always' },
               ]}
             />
           </Row>

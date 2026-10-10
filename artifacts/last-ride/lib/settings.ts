@@ -29,7 +29,14 @@ export const STORAGE_KEYS = {
   destinations: 'lastride-destinations',
   activeDestinationId: 'lastride-active-destination-id',
   nightHistory: 'lastride-night-history',
+  nightLocationMode: 'lastride-night-location-mode',
 } as const;
+
+/**
+ * How night tracking uses location: ask each time (the disclosure dialog),
+ * only while the app is open, or in the background too.
+ */
+export type NightLocationMode = 'ask' | 'foreground' | 'background';
 
 export const REMINDER_CHOICES = [30, 15, 10, 5];
 export const DEFAULT_REMINDERS = [15];
@@ -48,6 +55,7 @@ export type Settings = {
   /** All saved destinations stay on-device. */
   destinations: SavedDestination[];
   activeDestinationId: string | null;
+  nightLocationMode: NightLocationMode;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -60,6 +68,7 @@ export const DEFAULT_SETTINGS: Settings = {
   homeAddress: null,
   destinations: [],
   activeDestinationId: null,
+  nightLocationMode: 'ask',
 };
 
 function parseHomeStation(raw: string | null): StationOption | null {
@@ -144,7 +153,7 @@ export async function writePinnedStation(station: StationOption | null): Promise
 }
 
 export async function readSettings(): Promise<Settings> {
-  const [language, homeStation, walkingSpeed, reminders, pinnedStation, missedCheckIn, homeAddress, destinationsRaw, activeDestinationIdRaw] = await Promise.all([
+  const [language, homeStation, walkingSpeed, reminders, pinnedStation, missedCheckIn, homeAddress, destinationsRaw, activeDestinationIdRaw, nightLocationMode] = await Promise.all([
     AsyncStorage.getItem(STORAGE_KEYS.language),
     AsyncStorage.getItem(STORAGE_KEYS.homeStation),
     AsyncStorage.getItem(STORAGE_KEYS.walkingSpeed),
@@ -154,6 +163,7 @@ export async function readSettings(): Promise<Settings> {
     AsyncStorage.getItem(STORAGE_KEYS.homeAddress),
     AsyncStorage.getItem(STORAGE_KEYS.destinations),
     AsyncStorage.getItem(STORAGE_KEYS.activeDestinationId),
+    AsyncStorage.getItem(STORAGE_KEYS.nightLocationMode),
   ]);
 
   const legacyStation = parseHomeStation(homeStation);
@@ -191,6 +201,7 @@ export async function readSettings(): Promise<Settings> {
     homeAddress: activeDestination?.address ?? legacyAddress,
     destinations,
     activeDestinationId,
+    nightLocationMode: nightLocationMode === 'foreground' || nightLocationMode === 'background' ? nightLocationMode : 'ask',
   };
 }
 

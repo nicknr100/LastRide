@@ -340,11 +340,11 @@ describe('adaptive station search', () => {
         leaveByMs: jst(2026, 9, 24, 0, 20),
       }),
     ];
-    expect(shouldExpandStationSearch(options, jst(2026, 9, 23, 23, 0))).toBe(false);
+    expect(shouldExpandStationSearch(options)).toBe(false);
   });
 
-  test('widens when routes are sparse, disrupted, or the deadline is near', () => {
-    expect(shouldExpandStationSearch([choice()], jst(2026, 9, 23, 23, 0))).toBe(true);
+  test('widens only when routes are sparse or disrupted', () => {
+    expect(shouldExpandStationSearch([choice()])).toBe(true);
 
     const disrupted = [
       choice({ leaveByMs: jst(2026, 9, 24, 0, 30), disruptionLines: ['JR'] }),
@@ -353,7 +353,7 @@ describe('adaptive station search', () => {
         leaveByMs: jst(2026, 9, 24, 0, 20),
       }),
     ];
-    expect(shouldExpandStationSearch(disrupted, jst(2026, 9, 23, 23, 0))).toBe(true);
+    expect(shouldExpandStationSearch(disrupted)).toBe(true);
 
     const urgent = [
       choice({ leaveByMs: jst(2026, 9, 23, 23, 25) }),
@@ -362,6 +362,7 @@ describe('adaptive station search', () => {
         leaveByMs: jst(2026, 9, 23, 23, 24),
       }),
     ];
-    expect(shouldExpandStationSearch(urgent, jst(2026, 9, 23, 23, 0))).toBe(true);
+    // A near deadline alone doesn't widen: it would double provider calls on most plans.
+    expect(shouldExpandStationSearch(urgent)).toBe(false);
   });
 });

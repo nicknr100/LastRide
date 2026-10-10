@@ -42,11 +42,14 @@ Pinned stations still override the automatic choice.
 ## Adaptive station discovery
 
 Normal planning evaluates the three nearest distinct stations to keep provider
-work and latency bounded. It widens to six when any of these are true:
+work and latency bounded. It widens to six when either is true:
 
 1. fewer than two viable routes were found;
-2. one of the candidate routes has a current service incident;
-3. the best recommended departure is within 30 minutes.
+2. one of the candidate routes has a current service incident.
+
+A near deadline alone does not widen the search: the app is used most in the
+last half hour, so that would roughly double provider calls on most plans,
+and a farther station means a longer walk exactly when time is shortest.
 
 Only newly discovered stations are evaluated on the second pass.
 

@@ -16,7 +16,7 @@ move during the evening the plan follows you, and reminders are rescheduled.
   latest practical deadline, a live countdown, route freshness, current service
   disruptions, the route home (lines, transfers, arrival, fare), and nearby
   stations. Automatic station choice can avoid a disrupted route and widens its
-  search when the night is time-critical.
+  search when routes are scarce or disrupted.
 - **Reminders** — at the intervals you choose before leave-by, again when it's
   time to go, and once more just after the last train has gone, in case you
   missed it. They run while night-out tracking is on, which switches itself off

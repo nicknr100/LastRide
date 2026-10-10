@@ -96,6 +96,16 @@ if (Platform.OS !== 'web') {
   });
 }
 
+/** Whether background location is already allowed, so no OS prompt (or disclosure) is needed. */
+export async function hasBackgroundLocationPermission(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  try {
+    return (await Location.getBackgroundPermissionsAsync()).granted;
+  } catch {
+    return false;
+  }
+}
+
 /** Starts OS-level background updates. Returns true if background mode is active. */
 export async function startBackgroundTracking(): Promise<boolean> {
   if (Platform.OS === 'web') return false;

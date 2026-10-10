@@ -117,7 +117,8 @@ lookup, not the Business participant display name.
   still erased and the server-side participant record is removed when the
   event expires.
 - Choose **Only while app is open** when starting night-out tracking to avoid
-  background location access. Restart night tracking to change that choice.
+  background location access. LastRide remembers the choice; change it any
+  time in **Settings › Night location**.
 - Turn off location permission to stop location access.
 - Organizer account deletion/deprovisioning requests can be made through the
   contact below.

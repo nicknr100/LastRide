@@ -47,10 +47,14 @@ import {
   writePinnedStation,
   type HomeAddress,
   type Language,
+  type NightLocationMode,
   type SavedDestination,
 } from "@/lib/settings";
 import { clearSavedPlan, readSavedPlan, writeSavedPlan } from "@/lib/savedPlan";
-import { trackingDisclosure } from "@/lib/trackingDisclosure";
+import {
+  resolveNightLocationMode,
+  trackingDisclosure,
+} from "@/lib/trackingDisclosure";
 import { searchAddresses as searchAddressesApi } from "@workspace/api-client-react";
 import {
   LocationError,
@@ -68,6 +72,7 @@ import { getFirstTrain, type TrainTime } from "@/lib/timetable";
 import { endLiveActivity, syncLiveActivity } from "@/lib/liveActivity";
 import {
   clearTrackingSnapshot,
+  hasBackgroundLocationPermission,
   isTrackingFlagOn,
   markTrackingStarted,
   readTrackingSnapshot,
@@ -81,19 +86,33 @@ export type { StationOption } from "@/lib/stations";
 export { REMINDER_CHOICES } from "@/lib/settings";
 export type LocationErrorCode = LocationError["code"];
 
-/** An explicit choice before either OS location-permission prompt. */
-async function chooseNightTrackingLocation(language: Language | null): Promise<'foreground' | 'background'> {
-  if (Platform.OS === 'web') return 'foreground';
+/**
+ * An explicit choice before either OS location-permission prompt. The saved
+ * choice is reused without asking (see resolveNightLocationMode); `asked`
+ * says whether the dialog was shown, so the caller can remember the answer.
+ * Null means the user cancelled and tracking must not start.
+ */
+async function chooseNightTrackingLocation(
+  language: Language | null,
+  saved: NightLocationMode,
+): Promise<{ mode: 'foreground' | 'background'; asked: boolean } | null> {
+  if (Platform.OS === 'web') return { mode: 'foreground', asked: false };
+  const resolved = resolveNightLocationMode(
+    saved,
+    saved === 'background' && (await hasBackgroundLocationPermission()),
+  );
+  if (resolved !== 'ask') return { mode: resolved, asked: false };
   const disclosure = trackingDisclosure(language);
   return new Promise((resolve) => {
     Alert.alert(
       disclosure.title,
       disclosure.message,
       [
-        { text: disclosure.foregroundOnly, onPress: () => resolve('foreground') },
-        { text: disclosure.allowBackground, onPress: () => resolve('background') },
+        { text: disclosure.cancel, style: 'cancel', onPress: () => resolve(null) },
+        { text: disclosure.foregroundOnly, onPress: () => resolve({ mode: 'foreground', asked: true }) },
+        { text: disclosure.allowBackground, onPress: () => resolve({ mode: 'background', asked: true }) },
       ],
-      { cancelable: false },
+      { cancelable: true, onDismiss: () => resolve(null) },
     );
   });
 }
@@ -143,6 +162,9 @@ type RideContextValue = {
   /** Send the "missed the last train?" check-in after the last train has gone. */
   missedCheckIn: boolean;
   setMissedCheckIn: (enabled: boolean) => void;
+  /** Night tracking's location choice; "ask" shows the disclosure next time. */
+  nightLocationMode: NightLocationMode;
+  setNightLocationMode: (mode: NightLocationMode) => void;
   notificationsAllowed: boolean | null;
   /** "HH:MM" (Japan time) of the app clock — the demo clock while one is set. */
   currentTime: string;
@@ -350,6 +372,8 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
   const [missedCheckIn, setMissedCheckInState] = useState(
     DEFAULT_SETTINGS.missedCheckIn,
   );
+  const [nightLocationMode, setNightLocationModeState] =
+    useState<NightLocationMode>(DEFAULT_SETTINGS.nightLocationMode);
   const [pinnedStation, setPinnedStationState] = useState<StationOption | null>(
     DEFAULT_SETTINGS.pinnedStation,
   );
@@ -411,6 +435,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
         setReminderIntervals(saved.reminderIntervals);
         setPinnedStationState(saved.pinnedStation);
         setMissedCheckInState(saved.missedCheckIn);
+        setNightLocationModeState(saved.nightLocationMode);
         setHomeAddressState(saved.homeAddress);
         setDestinations(saved.destinations);
         setActiveDestinationId(saved.activeDestinationId);
@@ -715,6 +740,11 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
     void Haptics.selectionAsync();
   }, []);
 
+  const setNightLocationMode = useCallback((mode: NightLocationMode) => {
+    setNightLocationModeState(mode);
+    void AsyncStorage.setItem(STORAGE_KEYS.nightLocationMode, mode);
+  }, []);
+
   const setDemoNow = useCallback(
     (virtualMs: number | null) => {
       const realAt = Date.now();
@@ -844,6 +874,15 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
   const startTracking = useCallback(
     async ({ resume = false }: { resume?: boolean } = {}) => {
       const op = ++trackingOp.current;
+      // Decide before touching anything, so Cancel leaves no trace. The
+      // headless background task only auto-resumes after a session that
+      // already had background permission, so resume never prompts.
+      const choice = resume
+        ? { mode: 'background' as const, asked: false }
+        : await chooseNightTrackingLocation(language, nightLocationMode);
+      if (op !== trackingOp.current || !choice) return;
+      const locationMode = choice.mode;
+      if (choice.asked) setNightLocationMode(locationMode);
       const startedAt =
         (resume ? await readTrackingStartedAt() : null) ?? getNow();
       if (op !== trackingOp.current) return;
@@ -863,14 +902,6 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
           });
       };
       removeWatches();
-      // The headless background task is only resumed after a previously
-      // accepted background session; don't show an OS prompt on auto-resume.
-      // A new session always offers a battery-friendly foreground-only option,
-      // before requesting *either* OS location permission.
-      const locationMode = resume
-        ? 'background'
-        : await chooseNightTrackingLocation(language);
-      if (op !== trackingOp.current) return;
       if (locationMode === 'foreground' && Platform.OS !== 'web') {
         // Never leave a previously registered native background task running
         // after the user explicitly chose open-app-only tracking.
@@ -928,7 +959,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       setTrackingMode(backgroundActive ? "background" : "foreground");
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
-    [planFrom, applyPlan, removeWatches, getNow, language],
+    [planFrom, applyPlan, removeWatches, getNow, language, nightLocationMode, setNightLocationMode],
   );
 
   // Once the night is over (the first train has left), move on to the next night
@@ -1115,6 +1146,8 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       reminderIntervals,
       missedCheckIn,
       setMissedCheckIn,
+      nightLocationMode,
+      setNightLocationMode,
       notificationsAllowed,
       currentTime: formatJstTime(nowMs),
       nowMs,
@@ -1144,6 +1177,8 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       homeStation,
       missedCheckIn,
       setMissedCheckIn,
+      nightLocationMode,
+      setNightLocationMode,
       homeStationOption,
       isHydrated,
       isLocating,
