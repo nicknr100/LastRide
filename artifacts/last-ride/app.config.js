@@ -43,6 +43,17 @@ module.exports = ({ config }) => {
   }
   const joinUrl = enableUniversalLinks ? new URL(joinBase) : null;
 
+  // Consumer groups use remote push and verified invite links in production.
+  // Don't publish a silently crippled store binary when release flags are
+  // missing. Internal preview/free-signing builds remain opt-in.
+  if (process.env.EAS_BUILD_PROFILE === "production") {
+    if (!enableRemotePush)
+      throw new Error('Production builds require ENABLE_REMOTE_PUSH=true');
+    if (!enableUniversalLinks)
+      throw new Error('Production builds require ENABLE_UNIVERSAL_LINKS=true');
+  }
+
+
   const basePlugins = enableRemotePush
     ? (config.plugins || []).filter(
         (plugin) => plugin !== "./plugins/withoutPushEntitlement",
@@ -109,8 +120,22 @@ module.exports = ({ config }) => {
     },
   };
 
+  // Inject a restricted native Android Maps SDK key at build time only.
+  // Don't put this key in EXPO_PUBLIC_* or the JS bundle. Android-restricted
+  // SDK keys are present in the native manifest by design; restrict them by
+  // BOTH package name and Play/signing SHA-1 in Google Cloud Console.
+  const androidMapsKey = (process.env.EXPO_ANDROID_GOOGLE_MAPS_API_KEY || "").trim();
+  if (androidMapsKey && !/^AIza[0-9A-Za-z_-]{35}$/.test(androidMapsKey)) {
+    throw new Error('EXPO_ANDROID_GOOGLE_MAPS_API_KEY is not a valid Google Maps Android SDK key');
+  }
+  if (process.env.EAS_BUILD_PROFILE === "production" &&
+      process.env.EAS_BUILD_PLATFORM !== "ios" && !androidMapsKey) {
+    throw new Error('Production builds require EXPO_ANDROID_GOOGLE_MAPS_API_KEY');
+  }
+
   const android = {
     ...config.android,
+    ...(androidMapsKey ? { config: { ...(config.android?.config || {}), googleMaps: { apiKey: androidMapsKey } } } : {}),
     package:
       process.env.ANDROID_PACKAGE_ID || config.android?.package,
     ...(joinUrl
@@ -125,6 +150,11 @@ module.exports = ({ config }) => {
                   scheme: "https",
                   host: joinUrl.hostname,
                   pathPrefix: "/join",
+                },
+                {
+                  scheme: "https",
+                  host: joinUrl.hostname,
+                  pathPrefix: "/group-join",
                 },
               ],
               category: ["BROWSABLE", "DEFAULT"],
@@ -141,6 +171,7 @@ module.exports = ({ config }) => {
   const extra = {
     ...(config.extra || {}),
     liveActivityEnabled: enableLiveActivity,
+    androidGoogleMapsEnabled: Boolean(androidMapsKey),
     ...(easProjectId ? { eas: { projectId: easProjectId } } : {}),
   };
 

@@ -15,6 +15,7 @@ import { eq, inArray } from "drizzle-orm";
 import {
   apiRateLimitsTable,
   getDb,
+  groupAlertDeliveriesTable,
   groupMembersTable,
   groupNightParticipantsTable,
   groupNightsTable,
@@ -22,6 +23,7 @@ import {
 } from "@workspace/db";
 import {
   createGroupRecord,
+  recoverCreatedGroupRecord,
   disbandGroupRecord,
   endGroupTonightRecord,
   getGroupDetailRecord,
@@ -29,6 +31,7 @@ import {
   nextGroupLeaveAlertAt,
   GROUP_MEMBER_LIMIT,
   joinGroupRecord,
+  recoverJoinedGroupRecord,
   leaveGroupRecord,
   leaveGroupTonightRecord,
   purgeEndedGroupNights,
@@ -43,6 +46,8 @@ import {
 import { nightWindow, serviceDateFor } from "../src/lib/groupNight";
 import { clearEntitlementCache } from "../src/lib/revenueCat";
 import { dispatchGroupLeaveAlerts } from "../src/lib/groupNotifications";
+import { claimGroupDeliveryBatch, nextGroupOutboxRetryAt, settleGroupDelivery } from "../src/lib/groupAlertOutbox";
+import { withLeaveScheduleLock } from "../src/lib/leaveAlertSchedule";
 import app from "../src/app";
 
 /**
@@ -122,6 +127,66 @@ describe("group creation and joining", () => {
       .from(groupMembersTable)
       .where(eq(groupMembersTable.groupId, created.group.id));
     expect(member.memberTokenHash).not.toBe(created.memberToken);
+  });
+
+  it("same creation key recovers exactly one host after a lost response", async () => {
+    const creationKey = "c1".repeat(32);
+    const input = { name: "Friends", displayName: "Alice", language: "en" as const };
+    const first = await createGroupRecord(input, creationKey);
+    expect(first.kind).toBe("created");
+    if (first.kind !== "created") return;
+    expect(first.memberToken).toBe(creationKey);
+    const replay = await createGroupRecord(input, creationKey);
+    expect(replay.kind).toBe("replayed");
+    if (replay.kind !== "replayed") return;
+    expect(replay.group.id).toBe(first.group.id);
+    expect(replay.memberToken).toBe(first.memberToken);
+    expect(replay.group.me.role).toBe("host");
+    expect((await getDb().select().from(groupsTable))).toHaveLength(1);
+    expect((await getDb().select().from(groupMembersTable))).toHaveLength(1);
+    expect(await recoverCreatedGroupRecord("c2".repeat(32))).toBeNull();
+  });
+
+  it("concurrent create requests with the same key never create duplicate hosts", async () => {
+    const creationKey = "e5".repeat(32);
+    const input = { name: "Friends", displayName: "Alice" };
+    const results = await Promise.all(Array.from({ length: 8 }, () => createGroupRecord(input, creationKey)));
+    expect(results.filter((result) => result.kind === "created")).toHaveLength(1);
+    expect(new Set(results.map((result) => result.kind !== "invalid" ? result.group.id : "invalid")).size).toBe(1);
+    expect(await getDb().select().from(groupsTable)).toHaveLength(1);
+    expect(await getDb().select().from(groupMembersTable)).toHaveLength(1);
+  });
+
+  it("anonymous member creation is idempotent and recovers across invite rotation", async () => {
+    const created = await createGroupRecord({ name: "Friends", displayName: "Host" });
+    if (created.kind !== "created" || !created.group.invite) throw new Error("missing invite");
+    const input = { inviteToken: created.group.invite.inviteToken, displayName: "Alice" };
+    const key = "b2".repeat(32);
+    const first = await joinGroupRecord(input, key);
+    expect(first.kind).toBe("joined");
+    if (first.kind !== "joined") return;
+    expect(first.memberToken).toBe(key);
+    const replay = await joinGroupRecord(input, key);
+    expect(replay.kind).toBe("already");
+    if (replay.kind !== "already") return;
+    expect(replay.group.id).toBe(first.group.id);
+    expect(replay.memberToken).toBe(first.memberToken);
+    await rotateGroupInviteRecord(created.group.id, created.memberToken);
+    const rotated = await joinGroupRecord(input, key);
+    expect(rotated.kind).toBe("already");
+    expect(await recoverJoinedGroupRecord("c3".repeat(32))).toBeNull();
+    expect(await getDb().select().from(groupMembersTable)).toHaveLength(2);
+  });
+
+  it("concurrent duplicate member joins with the same key persist only once", async () => {
+    const created = await createGroupRecord({ name: "Friends", displayName: "Host" });
+    if (created.kind !== "created" || !created.group.invite) throw new Error("missing invite");
+    const input = { joinCode: created.group.invite.joinCode, displayName: "Alice" };
+    const key = "d4".repeat(32);
+    const results = await Promise.all(Array.from({ length: 8 }, () => joinGroupRecord(input, key)));
+    expect(results.filter((result) => result.kind === "joined")).toHaveLength(1);
+    expect(new Set(results.map((result) => result.kind === "invalid" || result.kind === "full" ? "invalid" : result.memberToken)).size).toBe(1);
+    expect(await getDb().select().from(groupMembersTable)).toHaveLength(2);
   });
 
   it("joins by short join code, case- and dash-insensitively", async () => {
@@ -648,6 +713,96 @@ describe("tonight", () => {
     expect(await claimDueGroupLeaveAlerts(at(32))).toEqual([]);
   });
 
+  it("atomically enqueues each recipient once, retries individual failures and expires with the night", async () => {
+    const { groupId, host, members } = await groupWithMembers(["Bea", "Cai"]);
+    const [bea, cai] = members;
+    for (const [member, name] of [[host, "host"], [bea, "bea"], [cai, "cai"]] as const)
+      await setPush(groupId, member.token, name);
+    await startGroupTonightRecord(groupId, host.token);
+    const leaveBy = new Date(tonightWindow().endsAt.getTime() - 2 * 60 * 60_000);
+    await setGroupTonightParticipationRecord(groupId, bea.token, leaveBy);
+    await setGroupTonightParticipationRecord(groupId, cai.token, null);
+    const dueAt = new Date(leaveBy.getTime() + 60_000);
+    const [alert] = await claimDueGroupLeaveAlerts(dueAt);
+    expect(alert.recipients).toHaveLength(2);
+    expect(await getDb().select().from(groupAlertDeliveriesTable)).toHaveLength(2);
+    expect(await claimDueGroupLeaveAlerts(dueAt)).toEqual([]);
+    expect(await getDb().select().from(groupAlertDeliveriesTable)).toHaveLength(2);
+
+    const leased = await claimGroupDeliveryBatch(dueAt);
+    expect(leased).toHaveLength(2);
+    expect(await claimGroupDeliveryBatch(dueAt)).toHaveLength(0);
+    const succeeded = leased[0];
+    const failed = leased[1];
+    await settleGroupDelivery(succeeded, { ticketId: "ticket-1" }, dueAt);
+    await settleGroupDelivery(failed, { error: "HTTP 503" }, dueAt);
+    expect(await nextGroupOutboxRetryAt(dueAt)).toEqual(new Date(dueAt.getTime() + 30_000));
+    const retryAt = new Date(dueAt.getTime() + 31_000);
+    const retryBatch = await claimGroupDeliveryBatch(retryAt);
+    expect(retryBatch.map((delivery) => delivery.id)).toEqual([failed.id]);
+    await settleGroupDelivery(retryBatch[0], { ticketId: "ticket-2" }, retryAt);
+    expect(await claimGroupDeliveryBatch(new Date(retryAt.getTime() + 60_000))).toHaveLength(0);
+
+    // The source's private leave-by time and push tickets never survive 08:00 JST.
+    expect(await purgeEndedGroupNights(tonightWindow().endsAt)).toBe(1);
+    expect(await getDb().select().from(groupAlertDeliveriesTable)).toEqual([]);
+  });
+
+  it("stale queued alerts cannot be delivered after the sender changes their leave time", async () => {
+    const { groupId, host, members } = await groupWithMembers(["Bea", "Cai"]);
+    for (const [member, label] of [[host, "host"], [members[0], "bea"], [members[1], "cai"]] as const)
+      await setPush(groupId, member.token, label);
+    await startGroupTonightRecord(groupId, host.token);
+    const leaveBy = new Date(tonightWindow().endsAt.getTime() - 2 * 60 * 60_000);
+    await setGroupTonightParticipationRecord(groupId, members[0].token, leaveBy);
+    await setGroupTonightParticipationRecord(groupId, members[1].token, null);
+    const firstDueAt = new Date(leaveBy.getTime() + 60_000);
+    await claimDueGroupLeaveAlerts(firstDueAt);
+    expect(await getDb().select().from(groupAlertDeliveriesTable)).toHaveLength(2);
+    await setGroupTonightParticipationRecord(groupId, members[0].token, new Date(leaveBy.getTime() + 20 * 60_000));
+    expect(await claimGroupDeliveryBatch(firstDueAt)).toEqual([]);
+    expect(await nextGroupOutboxRetryAt(firstDueAt)).toBeNull();
+  });
+
+  it("recipient opt-out after enqueuing prevents the queued notification from being sent", async () => {
+    const { groupId, host, members } = await groupWithMembers(["Bea", "Cai"]);
+    for (const [member, label] of [[host, "host"], [members[0], "bea"], [members[1], "cai"]] as const)
+      await setPush(groupId, member.token, label);
+    await startGroupTonightRecord(groupId, host.token);
+    const leaveBy = new Date(tonightWindow().endsAt.getTime() - 2 * 60 * 60_000);
+    await setGroupTonightParticipationRecord(groupId, members[0].token, leaveBy);
+    await setGroupTonightParticipationRecord(groupId, members[1].token, null);
+    const dueAt = new Date(leaveBy.getTime() + 60_000);
+    await claimDueGroupLeaveAlerts(dueAt);
+    expect(await getDb().select().from(groupAlertDeliveriesTable)).toHaveLength(2);
+    await updateGroupMembershipRecord(groupId, members[1].token, { leaveTimeAlerts: false });
+    const delivery = await claimGroupDeliveryBatch(dueAt);
+    expect(delivery.map((d) => d.recipientMemberId)).toEqual([host.id]);
+  });
+
+  it("serializes two independent schedule writers using a PostgreSQL advisory lock", async () => {
+    const entered: string[] = [];
+    let unblockFirst!: () => void;
+    let announceFirst!: () => void;
+    const firstStarted = new Promise<void>((resolve) => { announceFirst = resolve; });
+    const firstBlocked = new Promise<void>((resolve) => { unblockFirst = resolve; });
+    const first = withLeaveScheduleLock(async () => {
+      entered.push("first");
+      announceFirst();
+      await firstBlocked;
+    });
+    await firstStarted;
+    const second = withLeaveScheduleLock(async () => {
+      entered.push("second");
+    });
+    // The second writer cannot modify EventBridge while the first holds
+    // the transaction-scoped lock. Releasing the first also releases its lock.
+    expect(entered).toEqual(["first"]);
+    unblockFirst();
+    await Promise.all([first, second]);
+    expect(entered).toEqual(["first", "second"]);
+  });
+
   it("does not send stale leave-time alerts", async () => {
     const { groupId, host, members } = await groupWithMembers(["Bea", "Cai"]);
     await startGroupTonightRecord(groupId, host.token);
@@ -778,6 +933,50 @@ describe("groups HTTP routes", () => {
     expect(session.memberToken.length).toBeGreaterThanOrEqual(32);
     expect(session.group.me.role).toBe("host");
     expect(session.group.invite.joinCode).toHaveLength(8);
+  });
+
+  it("HTTP retry recovers a paid host even if premium expires after the first accepted request", async () => {
+    const key = "a4".repeat(32);
+    const headers = { "X-RevenueCat-App-User-Id": "paid-user", "X-Group-Create-Key": key };
+    const created = await call("POST", "/groups", { body: createBody, headers });
+    expect(created.status).toBe(201);
+    const first = (await created.json()) as { memberToken: string; group: { id: string } };
+    expect(first.memberToken).toBe(key);
+    premium = false;
+    clearEntitlementCache();
+    const recovered = await call("POST", "/groups", { body: createBody, headers });
+    expect(recovered.status).toBe(200);
+    const replay = (await recovered.json()) as { memberToken: string; group: { id: string } };
+    expect(replay.memberToken).toBe(first.memberToken);
+    expect(replay.group.id).toBe(first.group.id);
+    expect(await getDb().select().from(groupsTable)).toHaveLength(1);
+    expect((await call("POST", "/groups", {
+      body: createBody,
+      headers: { "X-RevenueCat-App-User-Id": "paid-user", "X-Group-Create-Key": "not-a-valid-key" },
+    })).status).toBe(400);
+    expect((await call("POST", "/groups", {
+      body: createBody,
+      headers: { "X-RevenueCat-App-User-Id": "paid-user", "X-Group-Create-Key": "b5".repeat(32) },
+    })).status).toBe(402);
+  });
+
+  it("HTTP join key retries recover the same member, including after invite rotation", async () => {
+    const created = await createGroupRecord({ name: "Friends", displayName: "Host" });
+    if (created.kind !== "created" || !created.group.invite) throw new Error("setup");
+    const key = "b4".repeat(32);
+    const body = { joinCode: created.group.invite.joinCode, displayName: "Alice" };
+    const first = await call("POST", "/groups/join", { body, headers: { "X-Group-Join-Key": key } });
+    expect(first.status).toBe(201);
+    const firstSession = (await first.json()) as { memberToken: string; group: { id: string } };
+    expect(firstSession.memberToken).toBe(key);
+    await rotateGroupInviteRecord(created.group.id, created.memberToken);
+    const recovered = await call("POST", "/groups/join", { body, headers: { "X-Group-Join-Key": key } });
+    expect(recovered.status).toBe(200);
+    const restored = (await recovered.json()) as { memberToken: string; group: { id: string } };
+    expect(restored.memberToken).toBe(key);
+    expect(restored.group.id).toBe(firstSession.group.id);
+    expect((await call("POST", "/groups/join", { body, headers: { "X-Group-Join-Key": "bad" } })).status).toBe(400);
+    expect(await getDb().select().from(groupMembersTable)).toHaveLength(2);
   });
 
   it("reset as host over HTTP disbands the group", async () => {

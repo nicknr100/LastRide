@@ -475,6 +475,16 @@ export interface HealthStatus {
 
 export type MemberTokenParameter = string;
 
+/**
+ * 256-bit hex capability generated before the first join request; also becomes this device's member credential
+ */
+export type GroupJoinKeyParameter = string;
+
+/**
+ * Device-generated 256-bit hexadecimal creation capability, retained across failed POST retries
+ */
+export type GroupCreateKeyParameter = string;
+
 export type RevenueCatAppUserIdParameter = string;
 
 export type ParticipantTokenParameter = string;

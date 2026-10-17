@@ -673,10 +673,16 @@ export const LeaveEnterpriseEventResponse = zod.void()
  */
 export const createGroupHeaderXRevenueCatAppUserIdMax = 200;
 
+export const createGroupHeaderXGroupCreateKeyMin = 64;
+export const createGroupHeaderXGroupCreateKeyMax = 64;
+
+
+export const createGroupHeaderXGroupCreateKeyRegExp = new RegExp('^[a-fA-F0-9]{64}$');
 
 
 export const CreateGroupHeader = zod.object({
-  "X-RevenueCat-App-User-Id": zod.string().min(1).max(createGroupHeaderXRevenueCatAppUserIdMax)
+  "X-RevenueCat-App-User-Id": zod.string().min(1).max(createGroupHeaderXRevenueCatAppUserIdMax),
+  "X-Group-Create-Key": zod.string().min(createGroupHeaderXGroupCreateKeyMin).max(createGroupHeaderXGroupCreateKeyMax).regex(createGroupHeaderXGroupCreateKeyRegExp).optional().describe('Device-generated 256-bit hexadecimal creation capability, retained across failed POST retries')
 })
 
 export const createGroupBodyNameMax = 80;
@@ -735,6 +741,17 @@ export const CreateGroupResponse = zod.object({
 /**
  * @summary Join a group with an invite token or join code
  */
+export const joinGroupHeaderXGroupJoinKeyMin = 64;
+export const joinGroupHeaderXGroupJoinKeyMax = 64;
+
+
+export const joinGroupHeaderXGroupJoinKeyRegExp = new RegExp('^[a-fA-F0-9]{64}$');
+
+
+export const JoinGroupHeader = zod.object({
+  "X-Group-Join-Key": zod.string().min(joinGroupHeaderXGroupJoinKeyMin).max(joinGroupHeaderXGroupJoinKeyMax).regex(joinGroupHeaderXGroupJoinKeyRegExp).optional().describe('256-bit hex capability generated before the first join request; also becomes this device\'s member credential')
+})
+
 export const joinGroupBodyInviteTokenMin = 32;
 export const joinGroupBodyInviteTokenMax = 256;
 
