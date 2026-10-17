@@ -30,7 +30,7 @@ This records the 58 findings from the static source audit. **Fixed** means the c
 | LR-024 | Host-transfer error promises unavailable transfer | **Pending** | Implement transfer or remove misleading error |
 | LR-025 | Duplicate group member on multiple personal devices | **Pending** | Identity/recovery plan |
 | LR-026 | iPhone-only copy appears on Android | **Partial** | Reset screen neutralized; full locale audit |
-| LR-027 | Group invite landing page shows only App Store | **Pending** | Platform-aware landing once Play listing is public |
+| LR-027 | Group invite landing page shows only App Store | **Partial** | Platform-aware links implemented; publish only after verified App Store / Play / Galaxy listings are live |
 | LR-028 | Generic group API error messages | **Pending** | Localized actionable error states |
 | LR-029 | Scheduling error suppressed; fallback misses alerts | **Pending P1** | Reliable persisted due job with retry/replay |
 | LR-030 | Concurrent EventBridge due writers race | **Implemented, pending CI** | Serialize read/modify/write with transaction-scoped PostgreSQL advisory lock and same-client lookups |
@@ -38,11 +38,11 @@ This records the 58 findings from the static source audit. **Fixed** means the c
 | LR-032 | Motionless background task not guaranteed by OS | **Pending** | Local alarms and foreground recovery |
 | LR-033 | One destination request failure discards good routes | **Fixed in source** | Provider failure chaos/integration test |
 | LR-034 | Shared-IP route lookups exhaust limiter | **Pending** | Per-client budget and multicaller simulations |
-| LR-035 | Straight-line walking ignores geography/barriers | **Partial** | Android map shows ≈ on time and no fabricated route polyline; actual street routing / ground truth remains blocked |
+| LR-035 | Straight-line walking ignores geography/barriers | **Partial** | iOS and Android no longer draw an invented straight-line walking route; missing real street routing and ground-truth ETAs still block release |
 | LR-036 | iOS vs Android latest train results disagree | **Pending P0** | Provider parity corpus |
 | LR-037 | Changes under 60 sec not re-sent | **Decision pending** | Product spec + threshold tests |
 | LR-038 | Offline background leave change may never retry | **Pending** | Durable reconnection queue |
-| LR-039 | OS clears reminder but cached signature remains | **Pending** | Reconcile scheduled notifications vs ledger |
+| LR-039 | OS clears reminder but cached signature remains | **Partial** | Native pending IDs reconciled with persisted future IDs on same-plan replan, crash-orphan cleanup and regression tests; prove physical-device recovery and OS delivery |
 | LR-040 | Android selected notification tone fallback | **Pending** | Channel/tone parity |
 | LR-041 | Doze and Focus delivery OS limits | **Platform limit** | Document realistic guarantees and E2E |
 | LR-042 | Revoked Android permission leaves tracking state stale | **Pending** | Reconcile on foreground and service lifecycle |
