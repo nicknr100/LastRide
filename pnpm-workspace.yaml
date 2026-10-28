@@ -42,7 +42,7 @@ packages:
 
 catalog:
   "@tanstack/react-query": ^5.104.1
-  "@types/node": ^25.3.3
+  "@types/node": ^26.6.5
   drizzle-orm: ^0.45.4
   # Must be this exact version because expo requires it
   react-dom: 19.2.3
