@@ -38,6 +38,9 @@ const LeaveCountdown = (props: LeaveCountdownProps, _environment: LiveActivityEn
   const toneColor = props.tone === "train" ? c.train : c.leave;
   const islandTone = props.tone === "train" ? ic.train : ic.leave;
   const range = { lower: new Date(props.shownAt), upper: new Date(props.countdownTo) };
+  // In the Dynamic Island: "1:12" over an hour (seconds clipped off natively, patched
+  // @expo/ui), the usual "12:34" under. Older builds ignore it and show "1:12:34".
+  const overAnHour = props.countdownTo - props.shownAt >= 60 * 60 * 1000;
 
   const stopColor = (p: typeof c, index: number) => {
     const stop = props.stops[index];
@@ -109,9 +112,8 @@ const LeaveCountdown = (props: LeaveCountdownProps, _environment: LiveActivityEn
       </VStack>
     ),
     // A's shape: the label left of the camera, the countdown right of it, both
-    // kept off the island's rounded ends. Two fields only (iOS 18+, patched
-    // @expo/ui): "1:12" over an hour, "12:34" under, so it stays clear of the
-    // battery. Before iOS 18 it is the full "1:12:34", shrunk to fit.
+    // kept off the island's rounded ends. "1:12" over an hour, "12:34" under,
+    // so it stays clear of the battery.
     compactLeading: (
       <Text modifiers={[font({ weight: "bold", size: 12 }), foregroundStyle(islandTone), lineLimit(1), minimumScaleFactor(0.7), padding({ leading: 6 })]}>{props.island}</Text>
     ),
@@ -119,7 +121,7 @@ const LeaveCountdown = (props: LeaveCountdownProps, _environment: LiveActivityEn
       <Text
         timerInterval={range}
         countsDown
-        maxFieldCount={2}
+        dropsSeconds={overAnHour}
         modifiers={[
           font({ weight: "bold", design: "rounded", size: 14 }),
           monospacedDigit(),
@@ -148,7 +150,7 @@ const LeaveCountdown = (props: LeaveCountdownProps, _environment: LiveActivityEn
         <Text
           timerInterval={range}
           countsDown
-          maxFieldCount={2}
+          dropsSeconds={overAnHour}
           modifiers={[font({ weight: "heavy", design: "rounded", size: 32 }), monospacedDigit(), foregroundStyle(islandTone), lineLimit(1), minimumScaleFactor(0.6)]}
         />
         {rail(ic)}

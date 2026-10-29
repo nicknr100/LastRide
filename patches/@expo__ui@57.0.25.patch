@@ -1,5 +1,5 @@
 diff --git a/build/swift-ui/Text/index.d.ts b/build/swift-ui/Text/index.d.ts
-index a8843b740a937f5245db0cb74d4d0dd2caf9363a..0d62b0e20a6a61545ead8d8b375f5bf4ce9ca3ae 100644
+index a8843b740a937f5245db0cb74d4d0dd2caf9363a..43a85e67d28448719056a9a3dc6c799bdf9ddd8d 100644
 --- a/build/swift-ui/Text/index.d.ts
 +++ b/build/swift-ui/Text/index.d.ts
 @@ -41,6 +41,12 @@ export interface TextProps extends CommonViewModifierProps {
@@ -7,48 +7,82 @@ index a8843b740a937f5245db0cb74d4d0dd2caf9363a..0d62b0e20a6a61545ead8d8b375f5bf4
       */
      pauseTime?: Date;
 +    /**
-+     * With `timerInterval` (counting down, not paused): show only this many fields,
-+     * so 2 gives "1:12" over an hour and "12:34" under. Ignored before iOS 18.
-+     * @platform ios 18.0+
++     * With `timerInterval`: hide the trailing seconds of the digital timer, so
++     * "1:12:34" shows as "1:12" (under an hour "12:34" would show as "12").
++     * @platform ios 16.0+
 +     */
-+    maxFieldCount?: number;
++    dropsSeconds?: boolean;
  }
  export declare function Text(props: TextProps): import("react/jsx-runtime").JSX.Element | null;
  //# sourceMappingURL=index.d.ts.map
 \ No newline at end of file
 diff --git a/ios/TextView.swift b/ios/TextView.swift
-index 7dfe0a9dc9fafb625067dbb29f80d82f767d63e1..9e140a46a8b77e8d7b9a2c9727daf5d23e63af57 100644
+index 7dfe0a9dc9fafb625067dbb29f80d82f767d63e1..2982cfffa9f3587953b732debaf54d9304d52571 100644
 --- a/ios/TextView.swift
 +++ b/ios/TextView.swift
 @@ -25,6 +25,8 @@ public final class TextViewProps: UIBaseViewProps {
    @Field public var timerInterval: ClosedRangeDate?
    @Field public var countsDown: Bool?
    @Field public var pauseTime: Date?
-+  // LastRide patch: with timerInterval, keep only this many fields (2: "1:12" over an hour, "12:34" under). iOS 18+.
-+  @Field public var maxFieldCount: Int?
++  // LastRide patch: with timerInterval, hide the trailing ":SS" ("1:12:34" shows as "1:12").
++  @Field public var dropsSeconds: Bool?
  
    // Override default frame alignment for text views
    override var defaultFrameAlignment: Alignment { .leading }
-@@ -45,7 +47,16 @@ public struct TextView: ExpoSwiftUI.View {
-   internal func buildText(applyModifiers: Bool = true) -> Text {
-     let text: Text
+@@ -38,8 +40,22 @@ public struct TextView: ExpoSwiftUI.View {
+   }
  
--    if #available(iOS 16.0, tvOS 16.0, *),
-+    if #available(iOS 18.0, tvOS 18.0, *),
-+       let maxFieldCount = props.maxFieldCount,
-+       props.pauseTime == nil,
-+       props.countsDown ?? true,
-+       let timerInterval = props.timerInterval,
-+       let lower = timerInterval.lower,
-+       let upper = timerInterval.upper,
-+       lower <= upper {
-+      text = Text(.currentDate, format: .timer(countingDownIn: lower..<upper, maxFieldCount: maxFieldCount))
-+    } else if #available(iOS 16.0, tvOS 16.0, *),
-        let timerInterval = props.timerInterval,
-        let lower = timerInterval.lower,
-        let upper = timerInterval.upper,
+   public var body: some View {
+-    buildText(applyModifiers: false)
++    if #available(iOS 16.0, tvOS 16.0, *), props.dropsSeconds == true, props.timerInterval != nil {
++      // LastRide patch: Apple's timer is only digital with seconds ("1:12:34"); dropping
++      // fields turns it into words ("1時間 12分"). So the live digital timer is drawn
++      // right-aligned and its last ":SS" (measured as ":00" in the same font) clipped off.
++      DropTrailingLayout {
++        buildText(applyModifiers: false)
++          .multilineTextAlignment(.trailing)
++          .frame(maxWidth: .infinity, alignment: .trailing)
++        Text(":00").accessibilityHidden(true)
++      }
++      .clipped()
+       .applyModifiers(props.modifiers, appContext: props.appContext, globalEventDispatcher: props.globalEventDispatcher)
++    } else {
++      buildText(applyModifiers: false)
++        .applyModifiers(props.modifiers, appContext: props.appContext, globalEventDispatcher: props.globalEventDispatcher)
++    }
+   }
+ 
+   internal func buildText(applyModifiers: Bool = true) -> Text {
+@@ -73,3 +89,27 @@ public struct TextView: ExpoSwiftUI.View {
+     return result
+   }
+ }
++
++/// LastRide patch: lays out its first view one second-view's width wider than
++/// itself, with their trailing edges past its own by that width, so (clipped)
++/// the end of the first view is hidden. The second view only measures.
++@available(iOS 16.0, tvOS 16.0, *)
++struct DropTrailingLayout: Layout {
++  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
++    guard subviews.count == 2 else { return .zero }
++    let cut = subviews[1].sizeThatFits(.unspecified).width
++    let full = subviews[0].sizeThatFits(.unspecified)
++    return CGSize(width: proposal.width ?? max(0, full.width - cut), height: full.height)
++  }
++
++  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
++    guard subviews.count == 2 else { return }
++    let cut = subviews[1].sizeThatFits(.unspecified).width
++    subviews[0].place(
++      at: CGPoint(x: bounds.maxX + cut, y: bounds.midY),
++      anchor: .trailing,
++      proposal: ProposedViewSize(width: bounds.width + cut, height: bounds.height)
++    )
++    subviews[1].place(at: CGPoint(x: bounds.maxX + cut + 1000, y: bounds.midY), anchor: .leading, proposal: .unspecified)
++  }
++}
 diff --git a/src/swift-ui/Text/index.tsx b/src/swift-ui/Text/index.tsx
-index 2351ee84db1984243d4b65ed4a52dec843a74906..a439edf04e167a395dc1b02498f0777d4ec1ea8c 100644
+index 2351ee84db1984243d4b65ed4a52dec843a74906..d3b8389727096d329c4468c7210ae5ce51351f56 100644
 --- a/src/swift-ui/Text/index.tsx
 +++ b/src/swift-ui/Text/index.tsx
 @@ -52,6 +52,13 @@ export interface TextProps extends CommonViewModifierProps {
@@ -57,11 +91,11 @@ index 2351ee84db1984243d4b65ed4a52dec843a74906..a439edf04e167a395dc1b02498f0777d
    pauseTime?: Date;
 +
 +  /**
-+   * With `timerInterval` (counting down, not paused): show only this many fields,
-+   * so 2 gives "1:12" over an hour and "12:34" under. Ignored before iOS 18.
-+   * @platform ios 18.0+
++   * With `timerInterval`: hide the trailing seconds of the digital timer, so
++   * "1:12:34" shows as "1:12" (under an hour "12:34" would show as "12").
++   * @platform ios 16.0+
 +   */
-+  maxFieldCount?: number;
++  dropsSeconds?: boolean;
  }
  
  type NativeTextProps = CommonViewModifierProps & {
@@ -69,7 +103,7 @@ index 2351ee84db1984243d4b65ed4a52dec843a74906..a439edf04e167a395dc1b02498f0777d
    timerInterval?: { lower: number; upper: number };
    countsDown?: boolean;
    pauseTime?: number;
-+  maxFieldCount?: number;
++  dropsSeconds?: boolean;
  };
  
  const TextNativeView: React.ComponentType<NativeTextProps> = requireNativeView(
