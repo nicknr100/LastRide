@@ -17,12 +17,14 @@ function positiveIntEnv(name: string, fallback: number): number {
  * as limiter keys (or appear in logs).
  */
 export function publicLookupFamily(path: string): string {
-  const family = /^\/(trains|stations|taxi|addresses|places|walk)(?:\/|$)/.exec(path)?.[1];
+  const family = /^(?:\/api)?\/(trains|stations|taxi|addresses|places|walk)(?:\/|$)/.exec(path)?.[1];
   return family ?? "other";
 }
 
 export function publicLookupRateKey(req: Request): string {
-  return "public-lookup:" + publicLookupFamily(req.path) + ":" + requestAddress(req);
+  // Mounted on ["/trains", …] under "/api", Express strips the mount path from
+  // req.path ("/last"); the family is in req.baseUrl ("/api/trains").
+  return "public-lookup:" + publicLookupFamily((req.baseUrl ?? "") + req.path) + ":" + requestAddress(req);
 }
 
 /**

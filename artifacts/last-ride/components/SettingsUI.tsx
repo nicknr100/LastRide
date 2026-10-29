@@ -100,7 +100,7 @@ export const soundLabel = (sound: ReminderSound, ja: boolean) =>
 export const marginLabel = (margin: LeaveMargin, ja: boolean) => (ja ? `${margin}分` : `${margin} min`);
 
 export const nightLocationLabel = (mode: NightLocationMode, ja: boolean) =>
-  ({ ask: ja ? '未選択' : 'Not set', foreground: ja ? 'アプリのみ' : 'App open', background: ja ? '閉じても更新' : 'When closed' })[mode];
+  ({ ask: ja ? '未選択' : 'Not set', foreground: ja ? 'アプリの使用中のみ' : 'App open', background: ja ? 'アプリを閉じても更新' : 'When closed' })[mode];
 
 /** "30・15分前 · ⏰出発時" style summary of what will be delivered. */
 export function reminderSummary(notifications: number[], alarms: number[], ja: boolean): string {

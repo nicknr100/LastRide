@@ -57,7 +57,7 @@ export default function ReminderSettingsScreen() {
         body={
           trackingMode
             ? ja ? '設定したタイミングで通知します。' : 'Reminders arrive at the times below.'
-            : ja ? 'ホーム画面で「案内を開始」を押すと、設定した時刻に通知します。' : 'Tap Start on the Leave screen and they arrive at the times below.'
+            : ja ? 'メイン画面で「案内を開始」を押すと、設定した時刻に通知します。' : 'Tap Start on the Leave screen and they arrive at the times below.'
         }
       />
 

@@ -40,7 +40,7 @@ export default function PaywallScreen() {
             <IconButton icon="x" label={ja ? '閉じる' : 'Close'} onPress={close} testID="close-paywall" />
           </View>
           <Text accessibilityRole="header" style={[styles.title, { color: colors.foreground }]}>
-            {ja ? '帰る時間を、\nもっと便利に。' : 'Everyone home,\non time.'}
+            {ja ? '帰る時間を、\nもっと便利に。' : 'Getting home,\nmade easier.'}
           </Text>
           {fromWidget && (
             <Text style={[styles.note, { color: colors.mutedForeground }]}>

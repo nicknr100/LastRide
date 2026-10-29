@@ -104,7 +104,7 @@ export default function SettingsScreen() {
         <Row
           testID="open-night-location"
           icon="moon"
-          title={ja ? '夜の位置情報' : 'Night location'}
+          title={ja ? '夜間の位置情報' : 'Night location'}
           value={nightLocationLabel(nightLocationMode, ja)}
           warning={locationNeedsAttention}
           onPress={() => router.push('/settings/location')}
@@ -113,7 +113,7 @@ export default function SettingsScreen() {
         <Row
           testID="open-margin"
           icon="clock"
-          title={ja ? '出発までの余裕時間' : 'Leave early by'}
+          title={ja ? '早めに出る時間' : 'Leave early by'}
           value={marginLabel(leaveMargin, ja)}
           onPress={() => router.push('/settings/margin')}
         />

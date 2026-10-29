@@ -62,7 +62,7 @@ describe("tracking: the live timeline", () => {
 
   test("after the last train: the ended notice, then the next day from 05:00", () => {
     expect(at(entries, jst(23, 50))).toMatchObject({ kind: "message", message: "今夜の終電は発車済みです" });
-    expect(at(entries, jst(29, 0))).toMatchObject({ kind: "message", icon: "moon", message: "LastRideを開くと今夜の出発時刻を確認できます" });
+    expect(at(entries, jst(29, 0))).toMatchObject({ kind: "message", icon: "moon", message: "帰り時を開くと今夜の出発時刻を表示" });
   });
 
   test("with the first train known, it shows that instead", () => {

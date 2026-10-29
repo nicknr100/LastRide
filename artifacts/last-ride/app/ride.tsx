@@ -424,7 +424,7 @@ export default function RideScreen() {
               onPress={() => router.push("/destinations")}
               accessibilityRole="button"
               accessibilityLabel={
-                ja ? `帰り先：${destinationLabel}。変更` : `${destinationLabel}. Change`
+                ja ? `帰る場所：${destinationLabel}。変更` : `${destinationLabel}. Change`
               }
               hitSlop={8}
               style={({ pressed }) => [
@@ -847,7 +847,7 @@ export default function RideScreen() {
               >
                 {trackingMode !== null ? (
                   <>
-                    <Text style={[styles.statusStrong, { color: colors.foreground }]}>{ja ? "トラッキング中" : "Tracking"}</Text>
+                    <Text style={[styles.statusStrong, { color: colors.foreground }]}>{ja ? "案内中" : "Tracking"}</Text>
                     {isSearching
                       ? ja
                         ? " · 確認中…"
@@ -1392,7 +1392,7 @@ export default function RideScreen() {
                     : "Finding your closest station…"
                   : locationError === "near-home"
                     ? ja
-                      ? "目的地の近くにいます"
+                      ? "帰る場所の近くにいます"
                       : "You're near home"
                     : ja
                       ? "位置情報を使う"

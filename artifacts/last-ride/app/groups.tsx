@@ -99,7 +99,7 @@ export default function GroupsScreen() {
     Alert.alert(
       ja ? 'この端末のグループ情報を消去しますか？' : 'Forget local group access?',
       ja
-        ? 'この端末に保存されたグループの参加情報がすべて失われます。元に戻せません。サーバー上のグループや参加者は削除されません。再参加には新しい招待が必要です。ホストの場合はグループが残る場合があります。'
+        ? 'この端末に保存されたグループの参加情報がすべて失われます。元に戻せません。サーバー上のグループや参加者は削除されません。再参加には新しい招待が必要です。ホストだったグループはサーバー上に残ることがあります。'
         : 'This permanently removes saved group access from this device, including keys that might still be recoverable. It does not delete server-side groups or remove you as a host. You will need new invitations to rejoin.',
       [
         { text: ja ? 'キャンセル' : 'Cancel', style: 'cancel' },
@@ -153,7 +153,7 @@ export default function GroupsScreen() {
             </Text>
             <Text style={[styles.optionBody, { color: colors.mutedForeground }]}>
               {ja
-                ? '端末の復元などにより、グループの認証情報を読み込めなくなる場合があります。グループのデータは自動削除されません。通信状況を確認して再試行してください。復元できない場合は、グループのホストに新しい招待を依頼してください。'
+                ? '端末の復元などにより、グループの認証情報を読み込めなくなる場合があります。グループのデータは自動削除されません。端末の状態を確認して、もう一度お試しください。復元できない場合は、グループのホストに新しい招待を依頼してください。'
                 : 'A device restore can lose the encrypted keys for your groups. LastRide has not erased your saved group list. Check your device and try again; if the keys cannot be recovered, contact your group host for a new invitation.'}
             </Text>
             <SecondaryButton label={ja ? 'もう一度読み込む' : 'Try again'} onPress={() => void refresh()} />
@@ -170,7 +170,7 @@ export default function GroupsScreen() {
           </Card>
         ) : !available ? (
           <Text style={[styles.note, { color: colors.mutedForeground }]}>
-            {ja ? 'グループ機能を使うにはインターネット接続が必要です。' : 'Groups need the LastRide server.'}
+            {ja ? '現在グループ機能を利用できません。通信状況を確認してください。' : 'Groups aren’t available right now. Check your connection.'}
           </Text>
         ) : loading && empty ? (
           <ActivityIndicator color={colors.primary} />

@@ -57,7 +57,7 @@ function inviteMessage(detail: GroupDetail, ja: boolean) {
   if (!detail.invite) return null;
   const link = groupInviteLink(detail.invite.inviteToken);
   return ja
-    ? `「${detail.name}」に参加して、帰る時間を共有しましょう（LastRide）\n${link}\n招待コード：${detail.invite.joinCode}`
+    ? `「${detail.name}」に参加して、帰る時間を共有しましょう（帰り時アプリ）\n${link}\n招待コード：${detail.invite.joinCode}`
     : `Join “${detail.name}” on LastRide to share leave times\n${link}\nInvite code: ${detail.invite.joinCode}`;
 }
 
@@ -68,7 +68,7 @@ export default function GroupScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { language, plan, nowMs, demoActive } = useLastRide();
   const clockMs = useSecondClock(nowMs, demoActive);
-  const { groups, apply, forget, refreshGroup, memberOptions } = useGroups();
+  const { groups, apply, forget, refreshGroup, memberOptions, credentialError, loading } = useGroups();
   const [refreshing, setRefreshing] = useState(false);
   // Silent background pushes are best effort. Always refresh when opening the
   // detail view, and let a person pull to refresh a long-lived active screen.
@@ -94,7 +94,14 @@ export default function GroupScreen() {
       <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top + 12 }]}>
         <View style={styles.content}>
           <IconButton icon="chevron-left" label={ja ? '戻る' : 'Back'} onPress={back} />
-          <Text style={[styles.note, { color: colors.mutedForeground }]}>{ja ? '読み込み中…' : 'Loading…'}</Text>
+          <Text style={[styles.note, { color: colors.mutedForeground }]}>
+            {/* Never spin for ever: unreadable saved keys, or a group no longer on this device. */}
+            {credentialError
+              ? ja ? 'この端末に保存したグループの情報を読み込めません。「グループ」の画面から復旧できます。' : 'This device’s saved group details can’t be read. You can recover from the Groups screen.'
+              : !loading && !groups.some((entry) => entry.membership.groupId === id)
+                ? ja ? 'このグループはこの端末にありません。' : 'This group isn’t on this device.'
+                : ja ? '読み込み中…' : 'Loading…'}
+          </Text>
         </View>
       </View>
     );

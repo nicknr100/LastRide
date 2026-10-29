@@ -16,10 +16,10 @@ describe('non-cancellable reminder operations', () => {
     expect(warning).not.toHaveBeenCalled();
   });
 
-  it('does not allow a timed-out old operation to race and overwrite the newer schedule', async () => {
+  it('does not let new work start at the warning', async () => {
     vi.useFakeTimers();
     const warning = vi.fn();
-    const enqueue = createSerialOperations(20_000, warning);
+    const enqueue = createSerialOperations(20_000, warning, 60_000);
     const events: string[] = [];
     let unblock!: () => void;
     const pending = new Promise<void>((resolve) => { unblock = resolve; });
@@ -33,10 +33,36 @@ describe('non-cancellable reminder operations', () => {
     });
     await vi.advanceTimersByTimeAsync(20_001);
     expect(warning).toHaveBeenCalledTimes(1);
-    expect(events).toEqual(['old-start']); // New work cannot start at the timeout.
+    expect(events).toEqual(['old-start']);
     unblock();
     await Promise.all([old, newer]);
     expect(events).toEqual(['old-start', 'old-end', 'new-start']);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('moves on from a native call that never answers, and the abandoned one changes nothing after', async () => {
+    vi.useFakeTimers();
+    const enqueue = createSerialOperations(20_000, vi.fn(), 60_000);
+    const events: string[] = [];
+    let unblock!: () => void;
+    const hung = new Promise<void>((resolve) => { unblock = resolve; });
+    const old = enqueue(async (control) => {
+      events.push('old-start');
+      await hung;
+      control.check();
+      events.push('old-overwrites'); // must never happen
+    });
+    const newer = enqueue(async (control) => {
+      control.check();
+      events.push('new-schedule');
+    });
+    await vi.advanceTimersByTimeAsync(60_001);
+    await Promise.all([old, newer]);
+    expect(events).toEqual(['old-start', 'new-schedule']);
+    // The stuck call finally answers: the old operation stops at its check.
+    unblock();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(events).toEqual(['old-start', 'new-schedule']);
     expect(vi.getTimerCount()).toBe(0);
   });
 

@@ -113,10 +113,19 @@ async function fetchOperator(
   return body as OdptTrainInformation[];
 }
 
-let cached: { at: number; disruptions: TrainDisruption[] } | null = null;
-let inflight: Promise<TrainDisruption[]> | null = null;
+/** What every operator said, and which operators couldn't be reached. */
+type Snapshot = { at: number; disruptions: TrainDisruption[]; failed: Set<string> };
 
-async function loadAll(): Promise<TrainDisruption[]> {
+/**
+ * An operator that failed is asked again after this, not on every request:
+ * during an ODPT outage each request would otherwise wait on six slow calls.
+ */
+const FAILED_CACHE_MS = 30_000;
+
+let cached: Snapshot | null = null;
+let inflight: Promise<Snapshot> | null = null;
+
+async function loadAll(): Promise<Snapshot> {
   const key = process.env.ODPT_KEY?.trim();
   if (!key) throw new TrainInformationUnavailableError();
   const { railways } = await timetableEngine();
@@ -124,11 +133,11 @@ async function loadAll(): Promise<TrainDisruption[]> {
     LICENSED_OPERATORS.map((operator) => fetchOperator(operator, key)),
   );
   const items: OdptTrainInformation[] = [];
-  let incomplete = false;
+  const failed = new Set<string>();
   results.forEach((result, index) => {
     if (result.status === "fulfilled") items.push(...result.value);
     else {
-      incomplete = true;
+      failed.add(LICENSED_OPERATORS[index]);
       logger.warn(
         {
           operator: LICENSED_OPERATORS[index],
@@ -139,14 +148,15 @@ async function loadAll(): Promise<TrainDisruption[]> {
       );
     }
   });
-  // Fail closed even when a different operator succeeded. An empty filtered
-  // array must never claim every queried line is running normally when some
-  // operators were unreachable.
-  if (incomplete) throw new TrainInformationUnavailableError();
-  return toDisruptions(items, railways);
+  return { at: Date.now(), disruptions: toDisruptions(items, railways), failed };
 }
 
-/** Current disruptions on any of `lineNames` (route leg line names). */
+/**
+ * Current disruptions on any of `lineNames` (route leg line names). Fails
+ * closed (TrainInformationUnavailableError) for a line this provider doesn't
+ * cover, or whose operator couldn't be reached: an empty list must never claim
+ * normal service it couldn't check. Another operator's outage doesn't matter.
+ */
 export async function trainDisruptionsForLines(
   lineNames: string[],
 ): Promise<TrainDisruption[]> {
@@ -155,25 +165,32 @@ export async function trainDisruptionsForLines(
   // disruption coverage. A JR/private line outside that set must never be
   // described as normal service merely because this provider has no entry.
   const { railways } = await timetableEngine();
-  const supported = [...railways.values()].map((railway) => railway.nameJa);
-  if (lineNames.some((line) => !supported.some((name) => disruptionMatchesLine(name, line)))) {
+  const operatorsOf = (line: string) =>
+    [...railways.values()].filter((railway) => disruptionMatchesLine(railway.nameJa, line)).map((railway) => railway.operator);
+  const lineOperators = lineNames.map(operatorsOf);
+  if (lineOperators.some((operators) => operators.length === 0)) {
     throw new TrainInformationUnavailableError();
   }
-  let all: TrainDisruption[];
-  if (cached && Date.now() - cached.at < CACHE_MS) {
-    all = cached.disruptions;
+  const fresh = (snapshot: Snapshot | null) =>
+    snapshot !== null && Date.now() - snapshot.at < (snapshot.failed.size > 0 ? FAILED_CACHE_MS : CACHE_MS);
+  let snapshot: Snapshot;
+  if (fresh(cached)) {
+    snapshot = cached!;
   } else {
     inflight ??= loadAll()
-      .then((disruptions) => {
-        cached = { at: Date.now(), disruptions };
-        return disruptions;
+      .then((loaded) => {
+        cached = loaded;
+        return loaded;
       })
       .finally(() => {
         inflight = null;
       });
-    all = await inflight;
+    snapshot = await inflight;
   }
-  return all.filter((incident) =>
+  if (lineOperators.some((operators) => operators.some((operator) => snapshot.failed.has(operator)))) {
+    throw new TrainInformationUnavailableError();
+  }
+  return snapshot.disruptions.filter((incident) =>
     lineNames.some((line) => disruptionMatchesLine(incident.line, line)),
   );
 }

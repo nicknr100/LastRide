@@ -85,6 +85,24 @@ function errorStatus(error: unknown): number | undefined {
   return (error as { status?: number } | null)?.status;
 }
 
+/** Saved group keys can't be read (e.g. a backup restored without its Keychain/Keystore entries). */
+async function membershipsUnreadable(): Promise<boolean> {
+  try {
+    await readMemberships();
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/** Interrupted creates/joins that can never complete (their membership couldn't be saved). */
+async function dropPendingGroupOperations(): Promise<void> {
+  const creation = await readPendingGroupCreation();
+  if (creation) await finishGroupCreation(creation.creationKey);
+  const join = await readPendingGroupJoin();
+  if (join) await finishGroupJoin(join.joinKey);
+}
+
 export function GroupsProvider({ children }: { children: React.ReactNode }) {
   const { plan, language, isHydrated } = useLastRide();
   const { groupCreationHeaders } = usePremium();
@@ -153,6 +171,12 @@ export function GroupsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const leaveAll = useCallback(async () => {
+    // Saved keys unreadable (a backup restored without them): nothing can be
+    // left on the server or recovered, so "erase all data" erases locally.
+    if (await membershipsUnreadable()) {
+      await clearLocalGroupsRef.current();
+      return;
+    }
     // An in-flight POST may already have created a host whose response never
     // arrived. Prevent reset from hiding its only recovery credential.
     if (await readPendingGroupCreation()) throw new Error("PENDING_GROUP_CREATION");
@@ -187,10 +211,16 @@ export function GroupsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clearUnavailableMemberships = useCallback(async () => {
+    const unreadable = await membershipsUnreadable();
     // Do not discard the only recovery proof of a partially committed
-    // group create or join. An in-flight operation must be resolved first.
-    if (await readPendingGroupCreation()) throw new Error("PENDING_GROUP_CREATION");
-    if (await readPendingGroupJoin()) throw new Error("PENDING_GROUP_JOIN");
+    // group create or join while it can still complete. With the saved keys
+    // unreadable it never can (saving its membership fails too), and keeping
+    // it would block this recovery for good: then it goes as well.
+    if (unreadable) await dropPendingGroupOperations();
+    else {
+      if (await readPendingGroupCreation()) throw new Error("PENDING_GROUP_CREATION");
+      if (await readPendingGroupJoin()) throw new Error("PENDING_GROUP_JOIN");
+    }
     // This is local recovery only: we cannot authenticate missing keys to
     // call the group leave API. The UI must warn about server-side remnants.
     await clearMemberships();
@@ -203,6 +233,9 @@ export function GroupsProvider({ children }: { children: React.ReactNode }) {
     setCredentialError(false);
     setLoading(false);
   }, []);
+
+  const clearLocalGroupsRef = useRef(clearUnavailableMemberships);
+  clearLocalGroupsRef.current = clearUnavailableMemberships;
 
   const refresh = useCallback(async () => {
     let list: GroupMembership[];
@@ -392,6 +425,9 @@ export function GroupsProvider({ children }: { children: React.ReactNode }) {
   const resumePendingCreation = useCallback(async () => {
     const pending = await readPendingGroupCreation();
     if (!pending) return null;
+    // Saved keys unreadable: its membership couldn't be saved anyway. Not asked
+    // on every launch (each would wake the server's database for nothing).
+    await readMemberships();
     let session: Awaited<ReturnType<typeof createGroup>>;
     try {
       session = await createGroup(
@@ -412,6 +448,8 @@ export function GroupsProvider({ children }: { children: React.ReactNode }) {
 
   const create = useCallback(
     async (name: string, displayName: string) => {
+      // As for joining: the new membership must be savable before anything is sent.
+      await readMemberships();
       const pending = await prepareGroupCreation(name, displayName, language ?? "ja");
       let session: Awaited<ReturnType<typeof createGroup>>;
       try {

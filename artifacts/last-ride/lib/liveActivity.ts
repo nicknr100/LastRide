@@ -79,7 +79,7 @@ export async function syncLiveActivity(
       url: "last-ride://ride",
       mapLabel: ja ? "地図" : "Map",
       mapUrl: `geo:${latitude},${longitude}?q=${latitude},${longitude}`,
-      stopLabel: ja ? "トラッキングを停止" : "Stop tracking",
+      stopLabel: ja ? "案内を終了" : "Stop tracking",
       stopUrl: "last-ride://ride?stop=1",
       channelName: ja ? "夜のカウントダウン" : "Night countdown",
     });

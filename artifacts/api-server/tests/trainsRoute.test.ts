@@ -161,7 +161,7 @@ describe("GET /trains/disruptions", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("does not cache a false no-incidents result when every operator fails", async () => {
+  it("does not cache a false no-incidents result when every operator fails, and asks again after 30 s", async () => {
     process.env.ODPT_KEY = "test-odpt-key";
     const broken = vi.fn(async () => new Response("oops", { status: 500 }));
     vi.stubGlobal("fetch", broken);
@@ -170,9 +170,30 @@ describe("GET /trains/disruptions", () => {
     await expect(trainDisruptionsForLines(["都営浅草線"]))
       .rejects.toBeInstanceOf(TrainInformationUnavailableError);
     const failedCalls = broken.mock.calls.length;
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("[]", { status: 200 })));
-    expect(await trainDisruptionsForLines(["都営浅草線"])).toEqual([]);
     expect(failedCalls).toBeGreaterThan(0);
+    // Within 30 s: still unavailable, without asking ODPT again (an outage isn't hammered).
+    const working = vi.fn(async () => new Response("[]", { status: 200 }));
+    vi.stubGlobal("fetch", working);
+    await expect(trainDisruptionsForLines(["都営浅草線"]))
+      .rejects.toBeInstanceOf(TrainInformationUnavailableError);
+    expect(working).not.toHaveBeenCalled();
+    // After 30 s it asks again and answers.
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now + 31_000);
+    expect(await trainDisruptionsForLines(["都営浅草線"])).toEqual([]);
+    vi.restoreAllMocks();
+  });
+
+  it("answers for lines whose operator answered, even if another operator is down", async () => {
+    process.env.ODPT_KEY = "test-odpt-key";
+    vi.stubGlobal("fetch", vi.fn(async (url: URL | string) => {
+      const operator = new URL(String(url)).searchParams.get("odpt:operator");
+      return operator === "odpt.Operator:Toei"
+        ? new Response("[]", { status: 200 })
+        : new Response("bad gateway", { status: 502 });
+    }));
+    const { trainDisruptionsForLines } = await import("../src/lib/trainInformation");
+    expect(await trainDisruptionsForLines(["都営浅草線"])).toEqual([]);
   });
 
   it("does not hide a partial ODPT outage when other operators report no issues", async () => {

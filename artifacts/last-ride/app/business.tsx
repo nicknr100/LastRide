@@ -469,11 +469,11 @@ function BusinessScreen() {
                       { color: colors.mutedForeground },
                     ]}
                   >
-                    {ja ? "通知するタイミング" : "Alert (min)"}
+                    {ja ? "通知（何分前）" : "Alert (min)"}
                   </Text>
                   <TextInput
                     accessibilityLabel={
-                      ja ? "通知するタイミング" : "Alert (minutes before)"
+                      ja ? "通知（何分前）" : "Alert (minutes before)"
                     }
                     value={alertLead}
                     onChangeText={setAlertLead}

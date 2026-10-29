@@ -87,3 +87,28 @@ describe("anonymous public lookup fairness and abuse guard", () => {
     expect((await exercise(guards, "/trains/last", "198.51.100.3")).allowed).toBe(true);
   });
 });
+
+describe("family as mounted in the app", () => {
+  it("reads the family from the mount path Express strips from req.path", async () => {
+    const { default: express } = await import("express");
+    const { publicLookupRateKey } = await import("../src/lib/publicLookupLimiter");
+    const app = express();
+    const router = express.Router();
+    const keys: string[] = [];
+    router.use(["/trains", "/stations"], (req, _res, next) => {
+      keys.push(publicLookupRateKey(req));
+      next();
+    });
+    router.use((_req, res) => {
+      res.end();
+    });
+    app.use("/api", router);
+    const server = app.listen(0);
+    await new Promise<void>((resolve) => server.once("listening", resolve));
+    const port = (server.address() as { port: number }).port;
+    await fetch(`http://127.0.0.1:${port}/api/trains/last?fromName=x`);
+    await fetch(`http://127.0.0.1:${port}/api/stations/nearby`);
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    expect(keys.map((key) => key.split(":")[1])).toEqual(["trains", "stations"]);
+  });
+});

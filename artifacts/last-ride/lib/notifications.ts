@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import type { ReminderPlan } from '@/lib/planner';
 import { planDelivery, type DeliveryContext, type ReminderLedger } from '@/lib/reminderLedger';
 import { isNativeReminderScheduleIntact, type ScheduledLocalNotification } from '@/lib/notificationScheduleHealth';
-import { createSerialOperations } from '@/lib/serialOperations';
+import { createSerialOperations, type OperationControl } from '@/lib/serialOperations';
 import { BOARDED_ACTION, BOARDED_CATEGORY, boardedButtons, boardedFollowUp, boardedNotificationId, boardedQuestion, NOT_BOARDED_ACTION, type HeldTrain } from '@/lib/boarding';
 import { REMINDER_SOUNDS, STORAGE_KEYS, type ReminderDelivery, type ReminderSound } from '@/lib/settings';
 import { alarmKit, alarmKitAvailable, type AlarmAuthorization } from '../modules/last-ride-alarm/src';
@@ -109,13 +109,15 @@ async function nativeSchedulePresent(plans: ReminderPlan[], hasHeld: boolean): P
   }
 }
 
-// Native Expo Notifications and AlarmKit calls are not abortable. Releasing
-// the queue after an arbitrary timeout allows stale work to continue and
-// cancel a newer reminder schedule. Watchdog warnings do not unlock the queue.
+// Native Expo Notifications and AlarmKit calls are not abortable. A call that
+// never answers must not stop every later reschedule for the night, so after
+// OPERATION_RELEASE_MS the queue moves on; the abandoned operation then stops at
+// its next control.check(), before it can cancel or overwrite the newer schedule.
 const OPERATION_WARNING_MS = 20_000;
+const OPERATION_RELEASE_MS = 60_000;
 const enqueue = createSerialOperations(OPERATION_WARNING_MS, () => {
   console.warn('[LastRide] reminder scheduling is still running');
-});
+}, OPERATION_RELEASE_MS);
 
 function configure() {
   if (configured || Platform.OS === 'web') return;
@@ -277,7 +279,8 @@ function clockTrigger(atMs: number): Notifications.CalendarTriggerInput {
   };
 }
 
-async function cancelOwned() {
+async function cancelOwned(control?: OperationControl) {
+  control?.check();
   webTimers.splice(0).forEach(clearTimeout);
   await AsyncStorage.removeItem(SIGNATURE_KEY).catch(() => undefined);
   if (Platform.OS === 'web') return;
@@ -289,6 +292,7 @@ async function cancelOwned() {
     .then((requests) => requests.map((request) => request.identifier).filter((id) =>
       id.startsWith('lastride-local-') || id.startsWith('lastride-boarded-')))
     .catch(() => [] as string[]);
+  control?.check();
   await writeOwnedIds([]);
   await writeScheduledEntries([]);
   await AsyncStorage.removeItem(SCHEDULED_ALARMS_KEY).catch(() => undefined);
@@ -344,7 +348,7 @@ async function queuedIds(): Promise<Set<string>> {
 }
 
 export function cancelAllReminders(): Promise<void> {
-  return enqueue(cancelOwned);
+  return enqueue((control) => cancelOwned(control));
 }
 
 /** The station locked for tonight can't get you home any more: the app went back to automatic. */
@@ -418,8 +422,8 @@ function reminderText({ leaveBy, station, language, held }: ReminderText, { minu
         : { title: 'LastRide — leave now', body: `Start walking to ${station}. If you miss this train, ${held.next} leaves at ${held.nextDeparts}.` };
     }
     return language === 'ja'
-      ? { title: 'LastRide — 出発の時間です', body: `${station}へ歩き始めましょう。終電に向かう出発時刻です。徒歩時間は目安のため、余裕をもって移動してください。` }
-      : { title: 'LastRide — leave now', body: `Start walking to ${station} now to make the last train.` };
+      ? { title: 'LastRide — 出発の時間です', body: `${station}へ歩き始めましょう。終電に間に合うよう、余裕をもって向かってください。` }
+      : { title: 'LastRide — leave now', body: `Start walking to ${station} now for the last train. Walking times are estimates.` };
   }
   return language === 'ja'
     ? { title: `LastRide — 出発まであと${minutesBefore}分`, body: `${leaveBy}に出て${station}へ。出発の準備をしましょう。` }
@@ -520,7 +524,7 @@ export function scheduleReminders(
   // with AlarmKit), the 乗れましたか？ question and the missed-train check-in keep their time.
   if (Platform.OS === 'ios')
     plans = plans.map((plan) => (plan.alarm || plan.missedCheckIn || plan.boardedCheck ? plan : { ...plan, fireAt: plan.fireAt - SCREEN_OFF_DELAY_MS }));
-  return enqueue(async () => {
+  return enqueue(async (control) => {
     const now = Date.now();
     const mark = delivery ? await recentMark(now) : null;
     const decided = delivery
@@ -548,7 +552,9 @@ export function scheduleReminders(
       : [];
     const alarmSet = JSON.stringify(alarmsAhead);
     let alarmsUnchanged = false;
-    if (Platform.OS === 'web') await cancelOwned();
+    // From here on it changes what's scheduled: not once the queue has moved on.
+    control.check();
+    if (Platform.OS === 'web') await cancelOwned(control);
     else {
       await AsyncStorage.removeItem(SIGNATURE_KEY).catch(() => undefined);
       configure();
@@ -569,6 +575,7 @@ export function scheduleReminders(
         alarmsUnchanged = false;
       }
       if (!alarmsUnchanged) {
+        control.check();
         await alarmKit.cancelAll().catch((error) => console.warn('[LastRide] Could not cancel alarms', error));
         await AsyncStorage.removeItem(ALARM_SET_KEY).catch(() => undefined);
         await AsyncStorage.removeItem(SCHEDULED_ALARMS_KEY).catch(() => undefined);
@@ -618,10 +625,12 @@ export function scheduleReminders(
         const tone = late.alarm ? soundFile(sound === 'default' ? 'urgent' : sound) : null;
         await present(title, body, null, '/ride', vibrate, tone, late.alarm === true || throughFocus);
       }
+      control.check();
       await AsyncStorage.setItem(STORAGE_KEYS.reminderLedger, JSON.stringify(decided.ledger)).catch(() => undefined);
     }
     if (upcoming.some((plan) => plan.boardedCheck) && text.held) await registerBoardedCategory(language);
     for (const plan of upcoming) {
+      control.check();
       // A delayed background task must never turn an expired alarm into an instant notification.
       if (plan.fireAt < Date.now() - 1000) continue;
       if (plan.boardedCheck) {
@@ -673,6 +682,7 @@ export function scheduleReminders(
       const id = reminderId(plan.fireAt, title, body, target, vibrate, tone, urgent);
       await queue(id, () => present(title, body, plan.fireAt, target, vibrate, tone, urgent, false, { identifier: id }));
     }
+    control.check();
     if (Platform.OS !== 'web') {
       if (!alarmsUnchanged) await AsyncStorage.setItem(ALARM_SET_KEY, alarmSet).catch(() => undefined);
       // Everything queued that isn't in the new set: changed or no longer wanted.

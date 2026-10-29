@@ -152,7 +152,7 @@ async function chooseNightTrackingLocation(
       Alert.alert(
         ja ? 'アプリを閉じても更新するには' : 'To update when closed',
         ja
-          ? 'iPhoneの設定で、LastRideの位置情報を「常に」にしてください（夜のトラッキング中だけ使います）。今夜はアプリを開いている間だけ更新することもできます。'
+          ? 'iPhoneの設定で、LastRideの位置情報を「常に」にしてください（夜間の案内中だけ使います）。今夜はアプリを開いている間だけ更新することもできます。'
           : 'In iPhone Settings, set LastRide’s location access to “Always” (used only during night tracking). Or track tonight while the app is open.',
         [
           { text: ja ? 'キャンセル' : 'Cancel', style: 'cancel', onPress: () => resolve(null) },
@@ -1420,13 +1420,10 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
     await clearTrackingSnapshot();
   }, [removeWatches]);
 
-  // A return from iOS/Android Settings can revoke location while tracking
-  // was already active. Do not leave "tracking in background" on the screen
-  // after the OS has blocked the foreground permission entirely.
-  useEffect(() => {
-    if (locationError !== 'permission' || trackingMode === null) return;
-    void stopTracking().catch(() => undefined);
-  }, [locationError, trackingMode, stopTracking]);
+  // Location turned off (or set to Never) while tracking: the session stays on, so
+  // tonight's reminders and alarms from the last plan still go off; the
+  // location-off card says the times no longer follow the user. Once location
+  // is back, the recheck below starts the watch again (startTracking resume).
 
   // Background permission can be revoked independently of foreground access:
   // downgrade honestly to app-open tracking, preserving the foreground watch.
@@ -1489,13 +1486,13 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
 
   /** `resume` picks tracking back up after an app restart, keeping its original start time. */
   const startTracking = useCallback(
-    async ({ resume = false }: { resume?: boolean } = {}) => {
+    async ({ resume = false, mode }: { resume?: boolean; mode?: 'foreground' | 'background' } = {}) => {
       const op = ++trackingOp.current;
       // Decide before touching anything, so Cancel leaves no trace. The
       // headless background task only auto-resumes after a session that
       // already had background permission, so resume never prompts.
       const choice = resume
-        ? { mode: 'background' as const, asked: false }
+        ? { mode: mode ?? ('background' as const), asked: false }
         : await chooseNightTrackingLocation(language, nightLocationMode);
       if (op !== trackingOp.current || !choice) return;
       // Starting tracking: the times are on screen, so no catch-up or notice for them.
@@ -1580,6 +1577,14 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       }
       if (watchResult.status !== 'started') {
         setLocationError(watchResult.status === 'denied' ? 'permission' : 'unavailable');
+        if (resume) {
+          // Tonight's session carries on without a watch (location off at launch):
+          // the reminders and alarms already set still go off, and the recheck
+          // starts the watch again once location is back.
+          setTrackingStartedAt(startedAt);
+          setTrackingMode((await isTrackingFlagOn()) ? 'background' : 'foreground');
+          return;
+        }
         setTrackingMode(null);
         setTrackingStartedAt(null);
         // A resumed native background task may still be registered even if
@@ -1589,18 +1594,20 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       }
       foregroundWatch.current = watchResult.subscription;
       setLocationError(null);
+      // Recorded before background updates start: their first update reads the
+      // start time, and last night's would end tracking at once (past its 04:00).
+      await recordSuccessfulStart();
+      if (op !== trackingOp.current) {
+        releaseOwnedWatch(foregroundWatch, watchResult.subscription);
+        return;
+      }
       // Background updates keep it fresh while the app is closed (dev/production builds).
       const backgroundActive = locationMode === 'background'
         ? await startBackgroundTracking(locationProfile(effectivePlanRef.current, getNow()))
         : false;
       if (op !== trackingOp.current) {
-        if (backgroundActive) await stopBackgroundTracking(); // compensate a stale start
-        return;
-      }
-      await recordSuccessfulStart();
-      if (op !== trackingOp.current) {
         releaseOwnedWatch(foregroundWatch, watchResult.subscription);
-        if (backgroundActive) await stopBackgroundTracking();
+        if (backgroundActive) await stopBackgroundTracking(); // compensate a stale start
         return;
       }
       setTrackingMode(backgroundActive ? "background" : "foreground");
@@ -1731,6 +1738,10 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
         // Allowed again (e.g. back from Settings): pick up by itself.
         setLocationError(null);
         void requestLocationRef.current();
+        // Tracking stayed on while location was off: follow the user again.
+        // In the same mode: an app-only session must not turn into closed-app tracking.
+        const mode = trackingModeRef.current;
+        if (mode !== null && !foregroundWatch.current) void startTrackingRef.current?.({ resume: true, mode });
       }
     };
     void recheck();
@@ -1755,6 +1766,9 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
     });
     return () => subscription.remove();
   }, [trackingMode, getNow]);
+
+  const startTrackingRef = useRef<typeof startTracking | null>(null);
+  startTrackingRef.current = startTracking;
 
   // Background tracking outlives the app: if it was on when the app was closed,
   // pick it back up on launch so reminders and live updates carry on.
@@ -2098,11 +2112,11 @@ export function locationErrorText(
         : "No station was found nearby.";
     case "no-route":
       return ja
-        ? "近くの駅から帰り先の最寄り駅へ行ける電車が見つかりませんでした。"
+        ? "近くの駅から帰る場所の最寄り駅へ行ける電車が見つかりませんでした。"
         : "No train from the stations near you reaches your destination's station.";
     case "near-home":
       return ja
-        ? "ここからは電車に乗る必要はありません。帰り先から離れると、終電と出発時刻を表示します。"
+        ? "ここからは電車に乗る必要はありません。帰る場所から離れると、終電と出発時刻を表示します。"
         : "No train needed from here. Once you're further from home, your last train and leave time will show.";
     case "unavailable":
       return ja
