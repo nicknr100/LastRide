@@ -122,14 +122,14 @@ describe('reminder delivery', () => {
     expect(companion).toMatchObject({ sound: false, interruptionLevel: 'passive' });
   });
 
-  it('schedules iOS reminders at a clock time (Japan time, to the second), 10 s early for the screen-off delay', async () => {
-    // Due 23:26:00 JST: iOS delivers ~9 s late with the screen off, so it's set for 23:25:50.
+  it('schedules iOS reminders at a clock time (Japan time, to the second), 20 s early for the screen-off delay', async () => {
+    // Due 23:26:00 JST: iOS delivers up to ~20 s late with the screen off, so it's set for 23:25:40.
     const fireAt = Date.UTC(2099, 9, 18, 14, 26, 0);
     vi.useFakeTimers({ now: fireAt - 30 * 60_000 });
     try {
       await scheduleReminders([{ minutesBefore: 10, fireAt }], text);
       const [{ trigger }] = mocks.notificationSchedule.mock.calls[0] as unknown as [{ trigger: Record<string, unknown> }];
-      expect(trigger).toEqual({ type: 'calendar', timezone: 'Asia/Tokyo', year: 2099, month: 10, day: 18, hour: 23, minute: 25, second: 50, repeats: false });
+      expect(trigger).toEqual({ type: 'calendar', timezone: 'Asia/Tokyo', year: 2099, month: 10, day: 18, hour: 23, minute: 25, second: 40, repeats: false });
     } finally {
       vi.useRealTimers();
     }
@@ -164,6 +164,23 @@ describe('reminder delivery', () => {
     expect(mocks.alarmSchedule).not.toHaveBeenCalled();
     expect(mocks.notificationSchedule).toHaveBeenCalledOnce();
     expect(mocks.notificationSchedule.mock.calls[0]).toMatchObject([{ content: { sound: 'lastride_pulse.caf' } }]);
+  });
+
+  it('an alarm standing in as a notification goes 20 s early like the others; a real alarm keeps its time', async () => {
+    const fireAt = Date.UTC(2099, 9, 18, 14, 26, 0);
+    vi.useFakeTimers({ now: fireAt - 30 * 60_000 });
+    try {
+      mocks.alarmStatus.mockResolvedValue('denied');
+      await scheduleReminders([{ minutesBefore: 0, fireAt, alarm: true }], text);
+      const [{ trigger }] = mocks.notificationSchedule.mock.calls[0] as unknown as [{ trigger: Record<string, unknown> }];
+      expect(trigger).toMatchObject({ minute: 25, second: 40 });
+      await cancelAllReminders();
+      mocks.alarmStatus.mockResolvedValue('authorized');
+      await scheduleReminders([{ minutesBefore: 0, fireAt, alarm: true }], text);
+      expect(mocks.alarmSchedule.mock.calls.at(-1)?.[1]).toBe(fireAt);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('plays the default sound for ordinary notifications', async () => {
@@ -392,7 +409,7 @@ describe('reminder delivery', () => {
     expect([...mocks.queued.keys()].filter((id) => id.startsWith('lastride-test-'))).toHaveLength(2);
   });
 
-  it('出る時間です fired 10 s early counts as sent: a re-plan in those seconds doesn’t send it again', async () => {
+  it('出る時間です fired 20 s early counts as sent: a re-plan in those seconds doesn’t send it again', async () => {
     mocks.store.delete(STORAGE_KEYS.reminderLedger);
     const start = Date.now();
     const leave = start + 600_000;
@@ -404,7 +421,7 @@ describe('reminder delivery', () => {
       vi.useFakeTimers({ now: start });
       await scheduleReminders([{ minutesBefore: 0, fireAt: leave }], text, undefined, info(leave));
       expect(mocks.notificationSchedule).toHaveBeenCalledOnce();
-      // 5 s before the leave time: iOS has shown it (set 10 s early). Walking moves the leave time a minute later.
+      // 5 s before the leave time: iOS has shown it (set 20 s early). Walking moves the leave time a minute later.
       vi.setSystemTime(leave - 5_000);
       await scheduleReminders([{ minutesBefore: 0, fireAt: leave + 60_000 }], text, undefined, info(leave + 60_000));
       expect(mocks.notificationSchedule).toHaveBeenCalledOnce();

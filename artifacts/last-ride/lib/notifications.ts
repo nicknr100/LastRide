@@ -311,13 +311,13 @@ async function cancelOwned(control?: OperationControl) {
 
 /**
  * iOS delivers scheduled notifications late while the screen is off (measured:
- * ~9 s, ~17 s with an Apple Watch paired; on time with the screen on, app open or
- * closed; AlarmKit alarms always on time). Leave reminders that are notifications
- * go this much early: about on time in a pocket without a watch, ~7 s late with
- * one, at most this early with the screen on. The words say the clock time to
- * leave, so early never misleads.
+ * ~9 s, ~17 s with an Apple Watch paired, ~20 s seen on a phone with one; on
+ * time with the screen on, app open or closed; AlarmKit alarms always on time).
+ * Leave reminders that are notifications go this much early: about on time in a
+ * pocket with a watch, ~10 s early without one, at most this early with the
+ * screen on. The words say the clock time to leave, so early never misleads.
  */
-export const SCREEN_OFF_DELAY_MS = 10_000;
+export const SCREEN_OFF_DELAY_MS = 20_000;
 
 /** TestFlight test notifications (sendTestNotifications): never cancelled with the reminders. */
 const TEST_ID_PREFIX = 'lastride-test-';
@@ -518,21 +518,23 @@ export function scheduleReminders(
   { sound, vibrate, throughFocus = true }: Pick<ReminderDelivery, 'sound' | 'vibrate'> & { throughFocus?: boolean } = { sound: 'default', vibrate: true },
   delivery?: DeliveryInfo,
 ): Promise<void> {
-  // Leave-reminder notifications go SCREEN_OFF_DELAY_MS early on iOS. Shifted here,
-  // before the record decides, so "sent" means sent: a re-plan in those seconds
-  // mustn't think 出る時間です is still to come and send it again. Alarms (exact
-  // with AlarmKit), the 乗れましたか？ question and the missed-train check-in keep their time.
-  if (Platform.OS === 'ios')
-    plans = plans.map((plan) => (plan.alarm || plan.missedCheckIn || plan.boardedCheck ? plan : { ...plan, fireAt: plan.fireAt - SCREEN_OFF_DELAY_MS }));
   return enqueue(async (control) => {
     const now = Date.now();
+    const alarmAuthorization = plans.some((plan) => plan.alarm) && alarmKitAvailable ? await alarmKit.status().catch(() => 'denied') : 'unsupported';
+    // Leave-reminder notifications go SCREEN_OFF_DELAY_MS early on iOS. Shifted here,
+    // before the record decides, so "sent" means sent: a re-plan in those seconds
+    // mustn't think 出る時間です is still to come and send it again. AlarmKit alarms
+    // (exact), the 乗れましたか？ question and the missed-train check-in keep their
+    // time; an alarm standing in as a notification (alarms not allowed) goes early too.
+    if (Platform.OS === 'ios')
+      plans = plans.map((plan) => ((plan.alarm && alarmAuthorization === 'authorized') || plan.missedCheckIn || plan.boardedCheck
+        ? plan
+        : { ...plan, fireAt: plan.fireAt - SCREEN_OFF_DELAY_MS }));
     const mark = delivery ? await recentMark(now) : null;
     const decided = delivery
       ? planDelivery(await readLedger(), { ...delivery, userChange: delivery.userChange || mark === 'user', stationTold: mark === 'stationTold' }, plans, now)
       : null;
     const upcoming = decided ? decided.schedule : plans;
-    const wantsAlarm = upcoming.some((plan) => plan.alarm);
-    const alarmAuthorization = wantsAlarm && alarmKitAvailable ? await alarmKit.status().catch(() => 'denied') : 'unsupported';
     // Permission can change in iOS Settings without the plans changing; a schedule
     // made of stand-in notifications must be replaced once alarms are allowed.
     const signature = JSON.stringify([
