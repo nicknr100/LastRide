@@ -380,7 +380,7 @@ function stationNotice(text: ReminderText, info: DeliveryInfo) {
       title: 'LastRide — 出発駅が変わりました',
       body:
         `${text.station}から${info.trainLabel}（${info.trainDeparts}発）。${text.leaveBy}に出る。` +
-        (info.movedFrom ? `${info.movedFrom}は出発時刻を過ぎていたため、${info.trainLabel}にしています。` : ''),
+        (info.movedFrom ? `${info.movedFrom}は出る時刻を過ぎていたため、${info.trainLabel}にしています。` : ''),
     };
   }
   return {
@@ -418,15 +418,15 @@ function reminderText({ leaveBy, station, language, held }: ReminderText, { minu
     // Only the next train's departure: its leave time depends on where the user will be.
     if (held) {
       return language === 'ja'
-        ? { title: 'LastRide — 出発の時間です', body: `${station}へ歩き始めましょう。乗り遅れても、${held.next}は${held.nextDeparts}発です。` }
+        ? { title: 'LastRide — 出る時間です', body: `${station}へ歩き始めましょう。乗り遅れても、${held.next}は${held.nextDeparts}発です。` }
         : { title: 'LastRide — leave now', body: `Start walking to ${station}. If you miss this train, ${held.next} leaves at ${held.nextDeparts}.` };
     }
     return language === 'ja'
-      ? { title: 'LastRide — 出発の時間です', body: `${station}へ歩き始めましょう。終電に間に合うよう、余裕をもって向かってください。` }
+      ? { title: 'LastRide — 出る時間です', body: `${station}へ歩き始めましょう。終電に間に合うよう、余裕をもって向かってください。` }
       : { title: 'LastRide — leave now', body: `Start walking to ${station} now for the last train. Walking times are estimates.` };
   }
   return language === 'ja'
-    ? { title: `LastRide — 出発まであと${minutesBefore}分`, body: `${leaveBy}に出て${station}へ。出発の準備をしましょう。` }
+    ? { title: `LastRide — 出るまであと${minutesBefore}分`, body: `${leaveBy}に出て${station}へ。そろそろ支度を。` }
     : { title: `LastRide — ${minutesBefore} min to go`, body: `Leave for ${station} by ${leaveBy}. Time to wrap up.` };
 }
 
@@ -520,7 +520,7 @@ export function scheduleReminders(
 ): Promise<void> {
   // Leave-reminder notifications go SCREEN_OFF_DELAY_MS early on iOS. Shifted here,
   // before the record decides, so "sent" means sent: a re-plan in those seconds
-  // mustn't think 出発の時間です is still to come and send it again. Alarms (exact
+  // mustn't think 出る時間です is still to come and send it again. Alarms (exact
   // with AlarmKit), the 乗れましたか？ question and the missed-train check-in keep their time.
   if (Platform.OS === 'ios')
     plans = plans.map((plan) => (plan.alarm || plan.missedCheckIn || plan.boardedCheck ? plan : { ...plan, fireAt: plan.fireAt - SCREEN_OFF_DELAY_MS }));

@@ -45,7 +45,7 @@ describe("tracking: the live timeline", () => {
 
   test("counts to the leave time, then the train, as the app does", () => {
     const before = at(entries, jst(23, 10));
-    expect(before).toMatchObject({ kind: "live", label: "出発まで", tone: "leave", countdownTo: jst(23, 36), from: "渋谷駅から" });
+    expect(before).toMatchObject({ kind: "live", label: "ここを出るまで", tone: "leave", countdownTo: jst(23, 36), from: "渋谷駅から" });
     expect(before.stops.map((stop) => [stop.time, stop.short, stop.state])).toEqual([
       ["23:36", "出る 23:36", "next"],
       ["23:45", "終電", "later"],

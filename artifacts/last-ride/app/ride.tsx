@@ -794,7 +794,7 @@ export default function RideScreen() {
                   ? "終電は発車しました"
                   : "The last train has left"
                 : ja
-                  ? "出発する時刻"
+                  ? "ここを出る時刻"
                   : "Leave at"}
             </Text>
             <Text

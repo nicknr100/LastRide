@@ -49,9 +49,9 @@ export default function OnboardingNotificationsScreen() {
           <Text style={[styles.appIconText, { color: colors.primaryForeground }]}>帰</Text>
         </View>
         <View style={styles.previewText}>
-          <Text style={[styles.previewTitle, { color: colors.foreground }]}>{ja ? 'LastRide — 出発まであと15分' : 'LastRide — 15 min'}</Text>
+          <Text style={[styles.previewTitle, { color: colors.foreground }]}>{ja ? 'LastRide — 出るまであと15分' : 'LastRide — 15 min'}</Text>
           <Text style={[styles.previewBody, { color: colors.mutedForeground }]}>
-            {ja ? '23:41に渋谷駅へ向かう予定です。出発の準備をしましょう。' : 'Leave for Shibuya at 23:41. Time to wrap up.'}
+            {ja ? '23:41に渋谷駅へ向かう予定です。そろそろ支度を。' : 'Leave for Shibuya at 23:41. Time to wrap up.'}
           </Text>
         </View>
         <Text style={[styles.previewTime, { color: colors.mutedForeground }]}>{ja ? '今' : 'now'}</Text>
