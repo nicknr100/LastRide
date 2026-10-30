@@ -18,6 +18,7 @@ import { AppleMaps } from '@/modules/apple-maps/src';
 import GoogleMapCardBackground, { googleMapsConfigured } from './GoogleMapCardBackground';
 import { isSafeMapSnapshotFrame, isValidMapCoordinate } from '@/lib/mapSnapshotGuard';
 import { verifiedMapPath } from '@/lib/verifiedMapPath';
+import { around, BOTTOM_RESERVED, clampTop, EDGE, overlapsAny, PIN_LABEL_HEIGHT, placeWalkLabel, STATION_TAG_HEIGHT, type Box } from '@/lib/mapLabels';
 
 type Point = { latitude: number; longitude: number };
 
@@ -284,13 +285,29 @@ function RealOverlay({
   // provided an ETA but not an actual polyline (barriers and crossings matter).
   // With places (taxi stands), the walk to the chosen one when its route is known.
   const line = you && (target || pins) ? verifiedMapPath(path).map((point) => project(frame, point)) : [];
-  const middle = line.length > 0 ? line[Math.floor(line.length / 2)] : null;
   const youPx = you ? project(frame, you) : null;
   const targetPx = target ? project(frame, target) : null;
   // Labels sit above their dot, but slide inward at the map's edges (never cut
   // off); the dot always stays exactly on the place.
   const stationWidth = stationTag ? Math.min(labelWidth(stationTag, 13), frame.width - 2 * EDGE) : 0;
   const walkWidth = walkLabel ? Math.min(labelWidth(walkLabel, 11), frame.width - 2 * EDGE) : 0;
+  const stationTagBox = targetPx && stationTag
+    ? (() => {
+        const left = clampLeft(targetPx.x, stationWidth, frame.width);
+        // On the side away from you, so it doesn't cover the walk coming in.
+        const top = youPx && youPx.y < targetPx.y
+          ? labelBelow(targetPx.y, STATION_TAG_HEIGHT, 9, frame.height)
+          : labelTop(targetPx.y, STATION_TAG_HEIGHT, 9, frame.height);
+        return { left, top, right: left + stationWidth, bottom: top + STATION_TAG_HEIGHT };
+      })()
+    : null;
+  // Your marker, the station's dot and its name: the walk label never covers them.
+  const marks: Box[] = [
+    ...(youPx ? [around(youPx, 14)] : []),
+    ...(targetPx && stationTag ? [around(targetPx, 8)] : []),
+    ...(stationTagBox ? [stationTagBox] : []),
+  ];
+  const walkSpot = walkLabel ? placeWalkLabel(line, walkWidth, frame, marks) : null;
   return (
     <>
       <Image source={{ uri: snapshot }} style={StyleSheet.absoluteFill} accessibilityIgnoresInvertColors />
@@ -316,11 +333,8 @@ function RealOverlay({
               styles.stationTagText,
               styles.placed,
               {
-                left: clampLeft(targetPx.x, stationWidth, frame.width),
-                // On the side away from you, so it doesn't cover the walk coming in.
-                top: youPx && youPx.y < targetPx.y
-                  ? labelBelow(targetPx.y, 22, 9, frame.height)
-                  : labelTop(targetPx.y, 22, 9, frame.height),
+                left: stationTagBox!.left,
+                top: stationTagBox!.top,
                 maxWidth: frame.width - 2 * EDGE,
                 backgroundColor: colors.line,
               },
@@ -336,9 +350,8 @@ function RealOverlay({
           style={[
             styles.bubble,
             {
-              // Beside the line (right of it, or left near the right edge), not on it.
-              left: middle ? besideLeft(middle.x, walkWidth, frame.width) : 10,
-              top: middle ? clampTop(middle.y - 10, 20, frame.height) : 10,
+              left: walkSpot?.left ?? 10,
+              top: walkSpot?.top ?? 10,
               maxWidth: frame.width - 2 * EDGE,
               backgroundColor: colors.background,
               borderColor: colors.input,
@@ -349,7 +362,7 @@ function RealOverlay({
           {walkLabel}
         </Text>
       ) : null}
-      {placePinLabels(pinsToDraw(pins), frame, youPx).map(({ pin, x, y, width, label }, index) => {
+      {placePinLabels(pinsToDraw(pins), frame, youPx, walkSpot ? [{ ...walkSpot, right: walkSpot.left + walkWidth, bottom: walkSpot.top + PIN_LABEL_HEIGHT }] : []).map(({ pin, x, y, width, label }, index) => {
         return (
           <React.Fragment key={`${index}-${pin.label}`}>
             {/* A small dot exactly on the place (taxi stand, somewhere to wait), its label above. */}
@@ -382,10 +395,6 @@ function RealOverlay({
   );
 }
 
-/** Labels keep at least this far from the map's edges. */
-const EDGE = 4;
-/** The bottom strip holds the Apple Maps logo, 法的情報 and the open-in-Maps button: no labels there. */
-const BOTTOM_RESERVED = 40;
 
 /** A label's rough drawn width: full-width (Japanese) characters ~1 em, others ~0.6 em, plus padding. */
 function labelWidth(text: string, fontSize: number): number {
@@ -399,15 +408,6 @@ function clampLeft(center: number, width: number, frameWidth: number): number {
   return Math.max(EDGE, Math.min(center - width / 2, frameWidth - width - EDGE));
 }
 
-function clampTop(top: number, height: number, frameHeight: number): number {
-  return Math.max(EDGE, Math.min(top, frameHeight - height - BOTTOM_RESERVED));
-}
-
-/** Left edge for a label just right of a line at `x`, or just left of it when there's no room. */
-function besideLeft(x: number, width: number, frameWidth: number): number {
-  const right = x + 10;
-  return right + width + EDGE <= frameWidth ? right : Math.max(EDGE, x - 10 - width);
-}
 
 /** Top for a label just below a dot at `y`, or just above when there's no room below. */
 function labelBelow(y: number, height: number, gap: number, frameHeight: number): number {
@@ -421,7 +421,6 @@ function labelTop(y: number, height: number, gap: number, frameHeight: number): 
   return clampTop(above >= EDGE ? above : y + gap, height, frameHeight);
 }
 
-const PIN_LABEL_HEIGHT = 20;
 
 type PlacedPin = { pin: MapPin; x: number; y: number; width: number; label: { left: number; top: number } | null };
 
@@ -430,13 +429,10 @@ type PlacedPin = { pin: MapPin; x: number; y: number; width: number; label: { le
  * first spot that doesn't overlap a label already placed. The highlighted pin
  * is placed first; one with no free spot keeps just its dot.
  */
-function placePinLabels(pins: MapPin[], frame: Frame, you: { x: number; y: number } | null): PlacedPin[] {
-  // Your own position marker counts as taken too, so no label covers it.
-  const taken: Array<{ left: number; top: number; right: number; bottom: number }> = you
-    ? [{ left: you.x - 14, top: you.y - 14, right: you.x + 14, bottom: you.y + 14 }]
-    : [];
-  const overlaps = (box: { left: number; top: number; right: number; bottom: number }) =>
-    taken.some((other) => box.left < other.right + 2 && box.right > other.left - 2 && box.top < other.bottom + 2 && box.bottom > other.top - 2);
+function placePinLabels(pins: MapPin[], frame: Frame, you: { x: number; y: number } | null, alsoTaken: Box[] = []): PlacedPin[] {
+  // Your own position marker (and the walk label) count as taken too, so no label covers them.
+  const taken: Box[] = [...(you ? [around(you, 14)] : []), ...alsoTaken];
+  const overlaps = (box: Box) => overlapsAny(box, taken);
   const placed = new Map<MapPin, PlacedPin>();
   const order = [...pins.filter((pin) => pin.emphasis), ...pins.filter((pin) => !pin.emphasis)];
   for (const pin of order) {
