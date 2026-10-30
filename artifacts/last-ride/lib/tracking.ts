@@ -55,7 +55,36 @@ export async function isTrackingFlagOn(): Promise<boolean> {
   return (await AsyncStorage.getItem(TRACKING_ACTIVE_KEY).catch(() => null)) === 'true';
 }
 
-async function recomputeFromLocation(coordinates: Coordinates): Promise<void> {
+/** A background position rougher than this is improved once before a re-plan. */
+const ROUGH_FIX_METERS = 200;
+const BETTER_FIX_TIMEOUT_MS = 10_000;
+
+/**
+ * More than an hour before leaving, background updates are cell / Wi-Fi
+ * positions (accuracy Low, up to ~1 km off): enough to notice moving, too
+ * rough to choose the closest station. When one is about to re-plan the night,
+ * ask once for a ~100 m position (a few seconds) and plan from that; the rough
+ * one stands if none comes.
+ */
+async function betterFix(rough: Coordinates, accuracyMeters: number | null | undefined): Promise<Coordinates> {
+  if (accuracyMeters == null || accuracyMeters <= ROUGH_FIX_METERS) return rough;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const position = await Promise.race([
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+      new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), BETTER_FIX_TIMEOUT_MS); }),
+    ]);
+    if (!position || (position.coords.accuracy ?? Infinity) >= accuracyMeters) return rough;
+    return { latitude: position.coords.latitude, longitude: position.coords.longitude };
+  } catch {
+    return rough;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function recomputeFromLocation(roughCoordinates: Coordinates, accuracyMeters?: number | null): Promise<void> {
+  let coordinates = roughCoordinates;
   const settings = await readSettings();
   if (!settings.homeStation) return; // planNight finds its position
   const now = Date.now();
@@ -93,6 +122,7 @@ async function recomputeFromLocation(coordinates: Coordinates): Promise<void> {
   const kept = previous && previousPlan && holdOnTheWay(previous, previousPlan, now)
     ? keepOnTheWay(previous, coordinates, now, previousPlan.lastTrain.departsAt)
     : null;
+  if (!kept) coordinates = await betterFix(coordinates, accuracyMeters);
   const basePlan = kept ?? await planNight(coordinates, settings.homeStation, settings.leaveMargin, now, { pinned: settings.pinnedStation, homeAddress: settings.homeAddress, previous });
   if (!(await isTrackingFlagOn())) return; // stopped while we were computing
   // The station locked for tonight can't get you home any more: back to automatic, and say so.
@@ -179,12 +209,12 @@ async function suggestStation(plan: NightPlan, leaveAtMs: number, language: 'ja'
 if (Platform.OS !== 'web') {
   TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
     if (error || !data) return;
-    const { locations } = data as { locations?: Array<{ coords: { latitude: number; longitude: number } }> };
+    const { locations } = data as { locations?: Array<{ coords: { latitude: number; longitude: number; accuracy?: number | null } }> };
     const latest = locations?.[locations.length - 1];
     if (!latest) return;
     if (!(await isTrackingFlagOn())) return;
     try {
-      await recomputeFromLocation({ latitude: latest.coords.latitude, longitude: latest.coords.longitude });
+      await recomputeFromLocation({ latitude: latest.coords.latitude, longitude: latest.coords.longitude }, latest.coords.accuracy);
     } catch {
       // Transient network failures are fine — the next location update retries.
     }
@@ -353,6 +383,20 @@ export async function readTrackingSnapshot(): Promise<NightPlan | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * A plan the open app made (更新, a station chosen, moving with it open) becomes
+ * the background task's plan too. Otherwise its next wake-up starts from its
+ * own older plan: the lock screen goes back to the old station (the widgets
+ * follow the app) and the re-plan keeps that station. A newer plan from the
+ * task itself is never overwritten.
+ */
+export async function shareForegroundPlan(plan: NightPlan): Promise<void> {
+  if (!(await isTrackingFlagOn())) return;
+  const stored = await readTrackingSnapshot();
+  if (stored && stored.computedAt > plan.computedAt) return;
+  await AsyncStorage.setItem(SNAPSHOT_KEY, JSON.stringify(plan)).catch(() => undefined);
 }
 
 export async function clearTrackingSnapshot(): Promise<void> {

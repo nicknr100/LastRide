@@ -108,6 +108,7 @@ import {
   isTrackingFlagOn,
   markTrackingStarted,
   readTrackingSnapshot,
+  shareForegroundPlan,
   readTrackingStartedAt,
   applyLocationProfile,
   startBackgroundTracking,
@@ -1817,6 +1818,13 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
     });
     return () => subscription.remove();
   }, [trackingMode, getNow]);
+
+  // And the other way: a plan made here (更新, a station chosen) is the background
+  // task's next starting point, so it doesn't bring the old station back.
+  useEffect(() => {
+    if (trackingMode !== "background" || !plan || demoActive) return;
+    void shareForegroundPlan(plan).catch(() => undefined);
+  }, [trackingMode, plan, demoActive]);
 
   const resetLanguage = useCallback(() => {
     setLanguageState(null);
