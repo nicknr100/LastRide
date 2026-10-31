@@ -43,6 +43,15 @@ describe('on the way', () => {
     expect(onTheWay(chosen, jst(23, 36))).toBe(false);
   });
 
+  test('re-plans are held from 2 minutes before the leave time: opening the app from 出る時間です (sent up to 20 s early) never swaps the station or train', () => {
+    // 1本前's leave time is 23:21.
+    expect(holdOnTheWay(night(), chosen, jst(23, 21) - 20_000)).toBe(true);
+    expect(holdOnTheWay(night(), chosen, jst(23, 19))).toBe(true);
+    expect(holdOnTheWay(night(), chosen, jst(23, 19) - 1000)).toBe(false);
+    // The screen's "on the way" still starts at the leave time itself.
+    expect(onTheWay(chosen, jst(23, 21) - 20_000)).toBe(false);
+  });
+
   test('keeps the station and times as they are, with only the new position', () => {
     const here = { latitude: 35.6585, longitude: 139.7005 };
     const kept = keepOnTheWay(night(), here, jst(23, 25), jst(23, 36));

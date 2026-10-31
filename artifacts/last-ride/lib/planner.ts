@@ -294,7 +294,11 @@ function assemble(options: StationChoice[], pinned: StationOption | null, coordi
   // A station whose last train has already left is never the automatic pick while
   // another still has one (e.g. after missing it, a farther line runs later).
   const running = sorted.filter((option) => option.lastTrain.departsAt > computedAt);
-  const auto = autoPick(running.length > 0 ? running : sorted, stay);
+  // Nor one whose train can't be reached on foot any more (0:10, a 5-minute walk
+  // to a 0:12 train) while another's still can. The walk alone decides, without
+  // the platform buffer, so someone already at the station keeps it.
+  const reachable = running.filter((option) => option.lastTrain.departsAt - option.walkingMinutes * MINUTE_MS >= computedAt);
+  const auto = autoPick(reachable.length > 0 ? reachable : running.length > 0 ? running : sorted, stay);
   // A pinned station whose last train has gone, while another still runs, can't get
   // the user home: back to automatic (the app and the background task say so).
   const pinnedChoice = pinned ? (running.length > 0 ? running : sorted).find((option) => sameStation(option.station, pinned)) : undefined;

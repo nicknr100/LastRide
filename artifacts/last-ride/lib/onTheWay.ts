@@ -12,6 +12,16 @@
 import type { NightPlan } from '@/lib/planner';
 import { recommendedLeaveTime } from '@/lib/reliability';
 import type { Coordinates } from '@/lib/stations';
+import { MINUTE_MS } from '@/lib/time';
+
+/**
+ * The hold starts this long before the leave time. 出る時間です arrives up to
+ * 20 s early (lib/notifications SCREEN_OFF_DELAY_MS) and people open the app
+ * from it: a re-plan in those seconds could pick another station and, its
+ * 2本前 already late there, move the user to 1本前 right after being told to
+ * leave for 2本前.
+ */
+const HOLD_BEFORE_LEAVE_MS = 2 * MINUTE_MS;
 
 /** The leave time for `effective` (the plan with tonight's train choice) has passed and its train hasn't left. */
 export function onTheWay(effective: Pick<NightPlan, 'leaveByMs' | 'recommendedLeaveByMs' | 'safetyMarginMinutes' | 'walkingMinutes' | 'lastTrain'>, nowMs: number): boolean {
@@ -19,10 +29,11 @@ export function onTheWay(effective: Pick<NightPlan, 'leaveByMs' | 'recommendedLe
 }
 
 /**
- * Whether an automatic re-plan should keep `previous` as it is: on the way,
- * and not a plan already held for a train that has since left (then the night
- * is re-planned once from the current position; if that plan's leave time has
- * passed too, the next update holds it again).
+ * Whether an automatic re-plan should keep `previous` as it is: on the way (or
+ * within 2 minutes of the leave time, see HOLD_BEFORE_LEAVE_MS), and not a plan
+ * already held for a train that has since left (then the night is re-planned
+ * once from the current position; if that plan's leave time has passed too,
+ * the next update holds it again).
  */
 export function holdOnTheWay(
   previous: Pick<NightPlan, 'frozenUntil'>,
@@ -30,7 +41,7 @@ export function holdOnTheWay(
   nowMs: number,
 ): boolean {
   if (previous.frozenUntil !== undefined && nowMs >= previous.frozenUntil) return false;
-  return onTheWay(effective, nowMs);
+  return nowMs >= recommendedLeaveTime(effective) - HOLD_BEFORE_LEAVE_MS && nowMs < effective.lastTrain.departsAt;
 }
 
 /**

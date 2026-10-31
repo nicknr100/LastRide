@@ -74,6 +74,10 @@ function distance(first: Coordinates, second: Coordinates) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/** 「JR関内駅」 and 「関内駅」 this close together are one station. */
+const SAME_COMPLEX_METERS = 300;
+const withoutJr = (nameJa: string) => nameJa.replace(/^JR\s*/, '');
+
 /** Merge entrances to one physical station, not all stations sharing a
  * Japanese name across different neighborhoods. */
 export function distinctStations(origin: Coordinates, places: Place[], limit: number): Array<{ station: StationOption; straightMeters: number }> {
@@ -89,6 +93,17 @@ export function distinctStations(origin: Coordinates, places: Place[], limit: nu
     if (accepted.some((existing) =>
       existing.station.nameJa === candidate.station.nameJa &&
       distance(existing.station, candidate.station) <= 1500)) continue;
+    // 「JR関内駅」 beside 「関内駅」: one station, not two of the closest three,
+    // under the plain name (the one timetables know). Only side by side:
+    // JR難波 and 難波 are different stations.
+    const twin = accepted.findIndex((existing) =>
+      withoutJr(existing.station.nameJa) === withoutJr(candidate.station.nameJa) &&
+      distance(existing.station, candidate.station) <= SAME_COMPLEX_METERS);
+    if (twin >= 0) {
+      if (accepted[twin].station.nameJa !== withoutJr(accepted[twin].station.nameJa) && candidate.station.nameJa === withoutJr(candidate.station.nameJa))
+        accepted[twin] = candidate;
+      continue;
+    }
     accepted.push(candidate);
     if (accepted.length >= limit) break;
   }
@@ -120,9 +135,70 @@ export async function appleWalkingRoute(
   };
 }
 
+const PUBLIC_TRANSPORT = 'MKPOICategoryPublicTransport';
+
+/**
+ * Railway stations from a 「駅」 search around `origin`: transit places only,
+ * within the radius (Apple's region is a hint, not a limit).
+ */
+export function stationsFromSearch(origin: Coordinates, places: Place[], radiusMeters = NEARBY_RADIUS_METERS): Place[] {
+  return places.filter((place) => place.category === PUBLIC_TRANSPORT && isValidMapCoordinate(place) && distance(origin, place) <= radiusMeters);
+}
+
+/** No station this close: look this far for the nearest ones (本牧, the harbour). */
+const WIDER_RADIUS_METERS = 5000;
+
+/**
+ * Stations around `coordinates`. A 「駅」 search, not Apple's nearby
+ * public-transport places: those stop at 50, nearly all bus stops in a
+ * residential area (near 山手 it listed only two stations, at times none, and
+ * the subway-only server list then gave a 30-minute walk), and on a Japanese
+ * iPhone a bus stop named after a station is called 「横浜本牧駅」 too. The
+ * search answers railway stations, nearest first; none within 2.5 km, it looks
+ * up to 5 km out. Only if the search itself fails, the nearby places as before
+ * (never just because it found none: there they'd be bus stops).
+ */
+async function stationPlaces(maps: NonNullable<typeof AppleMaps>, coordinates: Coordinates): Promise<Place[]> {
+  const search = async (radius: number) => {
+    const found = await maps.searchPlaces('駅', coordinates, radius);
+    return stationsFromSearch(coordinates, found, radius).filter(isRailwayStation);
+  };
+  let near: Place[];
+  try {
+    near = await search(NEARBY_RADIUS_METERS);
+  } catch {
+    return maps.nearbyStations(coordinates, NEARBY_RADIUS_METERS);
+  }
+  return near.length > 0 ? near : search(WIDER_RADIUS_METERS);
+}
+
+/** How far to look for the nearest station when none is within walking reach. */
+const FARTHEST_RADIUS_METERS = 30_000;
+
+export type FarStation = {
+  station: StationOption;
+  straightMeters: number;
+  /** Apple's driving time there, when it answers. */
+  drive: { minutes: number; distanceMeters: number } | null;
+};
+
+/**
+ * No station within 5 km (the walking reach): the nearest one anyway, with the
+ * drive there, so the app can say 「最寄りの○○駅まで約12km（車で約20分）」
+ * and point to a taxi instead of a dead end. Never planned as a walk.
+ */
+export async function appleNearestStationByCar(coordinates: Coordinates): Promise<FarStation | null> {
+  if (!AppleMaps) return null;
+  const found = await AppleMaps.searchPlaces('駅', coordinates, FARTHEST_RADIUS_METERS);
+  const [nearest] = distinctStations(coordinates, stationsFromSearch(coordinates, found, FARTHEST_RADIUS_METERS).filter(isRailwayStation), 1);
+  if (!nearest) return null;
+  const drive = await appleDrivingEta(coordinates, nearest.station).catch(() => null);
+  return { ...nearest, drive };
+}
+
 export async function appleNearbyStations(coordinates: Coordinates, walkingSpeed: WalkingSpeed, limit: number, knownWalks?: Map<string, WalkingRoute>): Promise<NearbyStation[] | null> {
   if (!AppleMaps) return null;
-  const places = await AppleMaps.nearbyStations(coordinates, NEARBY_RADIUS_METERS);
+  const places = await stationPlaces(AppleMaps, coordinates);
   const stations = distinctStations(coordinates, places, limit);
   return Promise.all(
     stations.map(async (candidate) => ({
@@ -192,6 +268,43 @@ export async function appleDrivingEta(from: Coordinates, to: Coordinates): Promi
 }
 
 export type TaxiStand = Coordinates & { name: string; meters: number };
+
+export type TaxiCompany = { name: string; phone: string; meters: number };
+
+/** Japanese numbers as dialled at home: "+81 494 22 5611" → "0494-22-5611". */
+export function domesticPhone(phone: string): string {
+  const number = phone.trim().replace(/^\+81\s*/, '0').replace(/\s+/g, '-');
+  // Free dial (0120 / 0800) comes without spaces: 0120-598-802.
+  return /^0(120|800)\d{6}$/.test(number) ? `${number.slice(0, 4)}-${number.slice(4, 7)}-${number.slice(7)}` : number;
+}
+
+/**
+ * Taxi companies from Apple's answer to 「タクシー」: with a phone number, within
+ * `radiusMeters` (Apple's region is only a hint: from 房総 it answers Yokohama),
+ * not a stand (no phone to call), not a 代行 (a driver for your own car).
+ */
+export function taxiCompaniesFrom(origin: Coordinates, places: Place[], radiusMeters: number, limit: number): TaxiCompany[] {
+  const seen = new Set<string>();
+  return places
+    .filter((place) => !!place.phone && isValidMapCoordinate(place) && place.category !== PUBLIC_TRANSPORT)
+    .filter((place) => /タクシー|交通|ハイヤー|自動車|taxi/i.test(place.name) && !/代行/.test(place.name))
+    .map((place) => ({ name: place.name, phone: domesticPhone(place.phone!), meters: distance(origin, place) }))
+    .filter((company) => company.meters <= radiusMeters)
+    .sort((first, second) => first.meters - second.meters)
+    .filter((company) => {
+      if (seen.has(company.phone)) return false;
+      seen.add(company.phone);
+      return true;
+    })
+    .slice(0, limit);
+}
+
+/** Local taxi companies to call where there's no stand to walk to (the countryside). */
+export async function appleTaxiCompanies(coordinates: Coordinates, radiusMeters = 20_000, limit = 3): Promise<TaxiCompany[] | null> {
+  if (!AppleMaps) return null;
+  const places = await AppleMaps.searchPlaces('タクシー', coordinates, radiusMeters);
+  return taxiCompaniesFrom(coordinates, places, radiusMeters, limit);
+}
 
 /** Taxi stands (タクシー乗り場) near `coordinates`, nearest first. */
 export async function appleNearbyTaxiStands(coordinates: Coordinates, radiusMeters = 800, limit = 3): Promise<TaxiStand[] | null> {

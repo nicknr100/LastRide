@@ -44,7 +44,20 @@ describe('nearby stations when Apple Maps fails', () => {
     expect(mocks.server).not.toHaveBeenCalled();
   });
 
-  it('only when Apple finds no stations at all does the server list stand in', async () => {
+  it('Apple answering with no stations: the last plan’s nearby stations, not the subway-only server list', async () => {
+    mocks.apple.mockResolvedValue([]);
+    const found = await findNearbyStations(here, 'normal', 3, undefined, [ishikawacho, motomachi]);
+    expect(found.map(({ station }) => station.nameJa)).toEqual(['元町・中華街', '石川町']);
+    expect(mocks.server).not.toHaveBeenCalled();
+  });
+
+  it('no station within 5 km and none on the server list: 近くに駅が見つかりませんでした, not a failed search', async () => {
+    mocks.apple.mockResolvedValue([]);
+    mocks.server.mockResolvedValue([]);
+    await expect(findNearbyStations(here, 'normal', 3)).rejects.toMatchObject({ code: 'no-station' });
+  });
+
+  it('only when Apple finds no stations and there is no recent plan does the server list stand in', async () => {
     mocks.apple.mockResolvedValue([]);
     const found = await findNearbyStations(here, 'normal', 3);
     expect(found.map(({ station }) => station.nameJa)).toEqual(['伊勢佐木長者町']);

@@ -28,8 +28,23 @@ possible, but LastRide no longer considers it comfortably reliable.
 
 ## Automatic station choice and suggestions
 
-The automatic pick is the closest station whose last train hasn't left. The
-station in use stays until another is at least 3 minutes closer on foot, so two
+Stations come from an Apple Maps search for 「駅」 around the user, transit
+places within 2.5 km, or within 5 km when none is that close
+(`lib/applePlaces.ts`). Apple's nearby public-transport places were used
+before, but they stop at 50 and are nearly all bus stops in a residential area,
+so stations went missing (and the subway-only server list stood in with a
+30-minute walk), and a bus stop named after a station (「横浜本牧駅」 on a
+Japanese iPhone) passed as one. 「JR関内駅」 beside 「関内駅」 counts as one
+station. Beyond 5 km nothing is planned as a walk: the main screen names the
+nearest station with the drive there and points to a taxi (`/alternatives`).
+If Apple finds no station, the last plan's nearby stations stand in before the
+server's list. In the background, a rough (cell / Wi-Fi) position is improved
+once before a re-plan chooses the station, and a plan made in the open app is
+the background task's starting point.
+
+The automatic pick is the closest station whose last train hasn't left and can
+still be reached on foot (the walk alone, so someone at the station keeps it);
+with none reachable, the closest still running. The station in use stays until another is at least 3 minutes closer on foot, so two
 nearby stations don't swap back and forth (each swap moving the leave time and
 sending a notice). A farther station is never switched to by itself, however
 much later it runs (`lib/planner.ts` `autoPick`).

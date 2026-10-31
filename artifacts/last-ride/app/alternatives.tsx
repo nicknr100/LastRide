@@ -28,8 +28,11 @@ import {
   stayPrice,
   type StayKind,
 } from "@/lib/stayPricing";
-import { shortLineName } from "@/lib/timetable";
+import { shortLineName, type TrainTime } from "@/lib/timetable";
+import { firstTrainFrom } from "@/lib/farStation";
+import { estimateTaxiFare, isLateNight } from "@/lib/taxiFare";
 import { Feather } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { PlaceholderBlock } from "@/components/Placeholder";
 import {
   getNearbyPlaces,
@@ -93,20 +96,6 @@ const STAY_META: Record<
 const KIND_ORDER: StayKind[] = ["net-cafe", "karaoke", "capsule", "hotel"];
 
 /** Japanese taxis add a 20% surcharge between 22:00 and 05:00. */
-function isLateNight(nowMs: number) {
-  return (
-    Number(formatJstTime(nowMs).slice(0, 2)) >= 22 ||
-    Number(formatJstTime(nowMs).slice(0, 2)) < 5
-  );
-}
-
-/** Tokyo-area meter (¥500 first 1.096 km, ¥100 per 255 m), +20% late at night. Kept in step with the server's estimate. */
-function estimateTaxiFare(distanceMeters: number, lateNight: boolean) {
-  const metered =
-    500 + Math.ceil(Math.max(0, distanceMeters - 1096) / 255) * 100;
-  return Math.round(lateNight ? metered * 1.2 : metered);
-}
-
 /** Streets add roughly 30% to the straight-line distance; 80 m per minute is a normal pace. */
 /** Taxi fares are estimates (distance, time of night): "約¥16,440" / "~¥16,440". */
 function approxYen(yen: number, ja: boolean) {
@@ -294,19 +283,46 @@ export default function AlternativesScreen() {
     nowMs,
     lastTrain,
     plan,
-    firstTrain,
-    firstTrainRoute,
-    minutesUntilFirstTrain,
-    stationName,
-    stationNameJa,
+    firstTrain: planFirstTrain,
+    firstTrainRoute: planFirstTrainRoute,
+    minutesUntilFirstTrain: planMinutesUntilFirstTrain,
+    stationName: planStationName,
+    stationNameJa: planStationNameJa,
     userCoordinates,
     homeStationOption,
     homeAddress,
     isLocating,
     locationError,
     requestLocation,
+    nearestByCar,
   } = useLastRide();
   const ja = language === "ja";
+  // No station within walking reach (no plan): the first train and places to wait
+  // come from the nearest station instead (lib/farStation), reached by taxi or car.
+  const far = !plan && locationError === "no-station" ? nearestByCar ?? null : null;
+  const [farFirstTrain, setFarFirstTrain] = useState<TrainTime | null>(null);
+  useEffect(() => {
+    setFarFirstTrain(null);
+    if (!far || !homeStationOption) return;
+    let current = true;
+    void firstTrainFrom(far, homeStationOption, Date.now())
+      .catch(() => null)
+      .then((found) => current && setFarFirstTrain(found));
+    return () => {
+      current = false;
+    };
+  }, [far, homeStationOption]);
+  const firstTrainRoute = plan ? planFirstTrainRoute : farFirstTrain;
+  const firstTrain = plan ? planFirstTrain : farFirstTrain ? formatJstTime(farFirstTrain.departsAt) : "--:--";
+  const minutesUntilFirstTrain = plan
+    ? planMinutesUntilFirstTrain
+    : farFirstTrain
+      ? Math.max(0, Math.ceil((farFirstTrain.departsAt - nowMs) / MINUTE_MS))
+      : null;
+  const stationName = far ? far.station.name : planStationName;
+  const stationNameJa = far ? far.station.nameJa : planStationNameJa;
+  /** The first train is known: from the plan's station, or the nearest one by car. */
+  const hasFirstTrain = !!plan || !!farFirstTrain;
   const { tonightGroup, memberOptions, apply } = useGroups();
   const [stays, setStays] = useState<StayOption[] | null>(null);
   const [staysError, setStaysError] = useState(false);
@@ -389,7 +405,9 @@ export default function AlternativesScreen() {
       return;
     }
     setIsLoadingStays(true);
-    fetchNearbyStays(userCoordinates.latitude, userCoordinates.longitude)
+    // Far from any station: places to wait near the nearest one (its first train), not here.
+    const stayOrigin = far ? far.station : userCoordinates;
+    fetchNearbyStays(stayOrigin.latitude, stayOrigin.longitude)
       .then((result) => {
         if (token === requestToken.current) setStays(result);
       })
@@ -437,6 +455,7 @@ export default function AlternativesScreen() {
     taxiTarget?.latitude,
     taxiTarget?.longitude,
     retryCount,
+    far,
   ]);
 
   useEffect(() => {
@@ -509,8 +528,10 @@ export default function AlternativesScreen() {
 
   useEffect(() => {
     if (selected === "partway" && !partway && !isLoadingPartway)
-      setSelected("train");
-  }, [selected, partway, isLoadingPartway]);
+      setSelected(hasFirstTrain ? "train" : "taxi");
+    else if (selected === "train" && !hasFirstTrain)
+      setSelected("taxi");
+  }, [selected, partway, isLoadingPartway, hasFirstTrain]);
 
   const station = ja ? stationNameJa : stationName;
   const homeLabel = destination || (ja ? "帰る場所" : "your destination");
@@ -546,10 +567,12 @@ export default function AlternativesScreen() {
     homeBy: number | null;
     cost: number | null;
   };
+  // Without a plan and no station found by car either, there's no first train to
+  // wait for: taxi, somewhere to wait and walking are the options.
   const options: Option[] = [
-    {
-      key: "train",
-      icon: "sunrise",
+    ...(hasFirstTrain ? [{
+      key: "train" as const,
+      icon: "sunrise" as const,
       label: ja ? "始発まで待つ" : "Wait for the first train",
       detail:
         firstTrainRoute?.approximate && minutesUntilFirstTrain !== null
@@ -565,7 +588,7 @@ export default function AlternativesScreen() {
             : `${formatDuration(minutesUntilFirstTrain, false)} wait`,
       homeBy: homeByTrain,
       cost: trainFare,
-    },
+    }] : []),
     ...(partway
       ? [
           {
@@ -585,10 +608,14 @@ export default function AlternativesScreen() {
           {
             key: "stay" as const,
             icon: "moon" as const,
-            label: ja ? "近くで始発を待つ" : "Wait somewhere + first train",
-            detail: ja
-              ? `${stays?.length ?? 0}軒が徒歩圏内`
-              : `${stays?.length ?? 0} places nearby`,
+            label: far
+              ? ja ? `${far.station.nameJa}駅の近くで始発を待つ` : `Wait near ${far.station.name} + first train`
+              : ja ? "近くで始発を待つ" : "Wait somewhere + first train",
+            detail: far
+              ? ja ? `駅の近くに${stays?.length ?? 0}軒` : `${stays?.length ?? 0} places near the station`
+              : ja
+                ? `${stays?.length ?? 0}軒が徒歩圏内`
+                : `${stays?.length ?? 0} places nearby`,
             homeBy: homeByTrain,
             cost: trainFare === null ? cheapestStay : cheapestStay + trainFare,
           },
@@ -733,6 +760,29 @@ export default function AlternativesScreen() {
         </View>
 
         {locationError === "permission" && <LocationOffCard ja={ja} />}
+
+        {/* No station within walking reach: the first train, buses and somewhere to wait are on 帰り方, around the nearest station. */}
+        {!plan && locationError === "no-station" && nearestByCar ? (
+          <Pressable
+            testID="open-far-ways"
+            onPress={() => router.push("/far-ways")}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.option, { backgroundColor: colors.card, borderColor: colors.primary, borderWidth: 1, opacity: pressed ? 0.8 : 1 }]}
+          >
+            <Feather name="navigation" size={19} color={colors.primary} />
+            <View style={styles.optionCopy}>
+              <Text style={[styles.optionLabel, { color: colors.foreground }]}>
+                {ja ? "歩いて行ける駅がありません" : "No station within walking distance"}
+              </Text>
+              <Text style={[styles.optionDetail, { color: colors.mutedForeground }]}>
+                {ja
+                  ? `バスや、${nearestByCar.station.nameJa}駅まで車で行く場合は「帰り方」で`
+                  : `Buses, or driving to ${nearestByCar.station.name}: see Ways home`}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+          </Pressable>
+        ) : null}
 
         {/* Pick an option; only its details are shown below */}
         <View style={styles.options}>
@@ -992,6 +1042,18 @@ export default function AlternativesScreen() {
                 legalLabel={ja ? "法的情報" : "Legal"}
               />
             )}
+            {far && (
+              <MapCard
+                height={160}
+                you={userCoordinates}
+                target={far.station}
+                stationTag={station}
+                onPress={() => openDrivingRoute(far.station)}
+                accessibilityLabel={ja ? `始発の${station}駅への車の経路を地図アプリで開く` : `Open driving directions to ${station} for the first train`}
+                openLabel={ja ? "地図アプリで開く" : "Open in Maps"}
+                legalLabel={ja ? "法的情報" : "Legal"}
+              />
+            )}
             <View style={styles.panelHead}>
               <Text style={[styles.panelTime, { color: colors.foreground }]}>
                 {firstTrain}
@@ -1003,11 +1065,12 @@ export default function AlternativesScreen() {
               )}
               <View style={styles.panelHeadCopy}>
                 <Text style={[styles.panelTitle, { color: colors.foreground }]}>
-                  {ja ? `${station}発` : `from ${station}`}
+                  {hasFirstTrain ? (ja ? `${station}発` : `from ${station}`) : station}
                 </Text>
                 <Text style={[styles.note, { color: colors.mutedForeground }]}>
                   {[
                     waitNote,
+                    far?.drive ? (ja ? `駅まで車で約${far.drive.minutes}分` : `${far.drive.minutes} min to the station by car`) : null,
                     trainFare === null ? null : `${formatYen(trainFare)}`,
                     homeByTrain
                       ? firstTrainRoute?.source === "apple" && !firstTrainRoute.arrivesAtStation
@@ -1299,8 +1362,8 @@ export default function AlternativesScreen() {
                           ]}
                         >
                           {ja
-                            ? `${meta.ja} · 徒歩${stay.walkMinutes}分`
-                            : `${meta.en} · ${stay.walkMinutes} min walk`}
+                            ? `${meta.ja} · ${far ? "駅から" : ""}徒歩${stay.walkMinutes}分`
+                            : `${meta.en} · ${stay.walkMinutes} min walk${far ? " from the station" : ""}`}
                           {stay.open24h ? (ja ? " · 24時間" : " · 24h") : ""}
                         </Text>
                         <Text

@@ -160,11 +160,12 @@ const RECENT_STATION_METERS = 2500;
  * which miss JR and private railways). The OpenStreetMap fallback
  * (development only) is ordered by straight-line distance and has no walk.
  *
- * When Apple's search fails (its request limit, a dropped connection), the
- * server's list is no stand-in on iPhone: it has only subway-type lines, so
- * near 元町・中華街 it offered 伊勢佐木長者町, a 32-minute walk. Then
- * `recent` (the last plan's stations, when nearby) are used, or it fails
- * ('unavailable') so the plan in force stays until the next try.
+ * When Apple's search fails (its request limit, a dropped connection) or
+ * finds no station, the server's list is no stand-in on iPhone: it has only
+ * subway-type lines, so near 元町・中華街 it offered 伊勢佐木長者町, a
+ * 32-minute walk. Then `recent` (the last plan's stations, when nearby) are
+ * used; a failed search with none fails ('unavailable') so the plan in force
+ * stays until the next try.
  */
 export async function findNearbyStations(
   coordinates: Coordinates,
@@ -181,16 +182,17 @@ export async function findNearbyStations(
     return null;
   });
   if (apple && apple.length > 0) return apple;
-  if (appleFailed) {
-    // Only stations still near here: someone moving on while Apple keeps failing
-    // mustn't be given stations from where they were.
+  // Apple failed, or answered with no stations (iPhone): the last plan's stations
+  // first. Only stations still near here: someone moving on while Apple keeps
+  // failing mustn't be given stations from where they were.
+  if (appleFailed || apple) {
     const near = recent
       .map((station) => ({ station, straightMeters: distanceBetween(coordinates, station), walk: knownWalks?.get(station.nameJa) }))
       .filter(({ straightMeters }) => straightMeters <= RECENT_STATION_METERS)
       .sort((first, second) => first.straightMeters - second.straightMeters)
       .slice(0, limit);
-    if (near.length === 0) throw new LocationError("unavailable");
-    return near;
+    if (near.length > 0) return near;
+    if (appleFailed) throw new LocationError("unavailable");
   }
   if (apiBaseUrl) {
     try {
@@ -222,6 +224,9 @@ export async function findNearbyStations(
       // Server or provider unavailable: fall back to OpenStreetMap below.
     }
   }
+  // Apple answered and has no station within 5 km (nor the server within 2.5):
+  // there is none to walk to, which isn't a failed search to retry.
+  if (apple) throw new LocationError("no-station");
   if (!communityFallbacksEnabled) throw new LocationError("unavailable");
   return findNearbyStationsOsm(coordinates, limit);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { distinctStations, isRailwayStation, stationBaseName } from "@/lib/applePlaces";
+import { distinctStations, domesticPhone, isRailwayStation, stationBaseName, stationsFromSearch, taxiCompaniesFrom } from "@/lib/applePlaces";
 
 const place = (name: string, latitude: number, longitude: number) => ({
   name,
@@ -71,5 +71,84 @@ describe("distinctStations", () => {
     );
     expect(stations.map(({ station }) => station.nameJa)).toEqual(["渋谷", "神泉"]);
     expect(stations[0].station.regionJa).toBe("東京都渋谷区");
+  });
+});
+
+describe("stationsFromSearch (the 「駅」 search)", () => {
+  // Apple's answer near 山手 (35.43636, 139.64972), as on a Japanese iPhone.
+  const here = { latitude: 35.436361, longitude: 139.649722 };
+  const shop = { ...place("ニューヤマザキデイリーストア 元町中華街駅店", 35.44179, 139.65128), category: "MKPOICategoryFoodMarket" };
+  const answer = [
+    shop,
+    place("元町・中華街駅", 35.4423, 139.65065),
+    place("石川町駅", 35.43874, 139.64299),
+    place("石川町駅南口タクシー乗り場", 35.43828, 139.64334),
+    place("山手駅", 35.42685, 139.64642),
+    place("伊勢佐木長者町駅", 35.44104, 139.63301),
+    place("横浜駅", 35.46604, 139.62259),
+  ];
+
+  it("keeps railway stations within 2.5 km: shops, taxi ranks and far stations go", () => {
+    const stations = stationsFromSearch(here, answer).filter(isRailwayStation);
+    expect(stations.map(({ name }) => name)).toEqual(["元町・中華街駅", "石川町駅", "山手駅", "伊勢佐木長者町駅"]);
+  });
+
+  it("with nothing within 2.5 km (本牧, the harbour), the wider look keeps the nearest real stations", () => {
+    const honmoku = { latitude: 35.4184, longitude: 139.6814 };
+    expect(stationsFromSearch(honmoku, answer).filter(isRailwayStation)).toEqual([]);
+    expect(stationsFromSearch(honmoku, answer, 5000).filter(isRailwayStation).map(({ name }) => name)).toEqual(["元町・中華街駅", "石川町駅", "山手駅"]);
+  });
+
+  it("so the closest three are the stations a walk away, not a 30-minute one", () => {
+    const stations = distinctStations(here, stationsFromSearch(here, answer).filter(isRailwayStation), 3);
+    expect(stations.map(({ station }) => station.nameJa)).toEqual(["石川町", "元町・中華街", "山手"]);
+  });
+});
+
+describe("distinctStations: JR-prefixed names", () => {
+  const here = { latitude: 35.4436, longitude: 139.6365 };
+  it("「JR関内駅」 beside 「関内駅」 counts once, leaving room for another station", () => {
+    const stations = distinctStations(here, [
+      place("JR関内駅", 35.44328, 139.63702),
+      place("関内駅", 35.44414, 139.63598),
+      place("伊勢佐木長者町駅", 35.44104, 139.63301),
+    ], 2);
+    expect(stations.map(({ station }) => station.nameJa)).toEqual(["関内", "伊勢佐木長者町"]);
+  });
+
+  it("but JR難波 and 難波, apart, stay two stations", () => {
+    const namba = { latitude: 34.6667, longitude: 135.4975 };
+    const stations = distinctStations(namba, [place("JR難波駅", 34.6680, 135.4950), place("難波駅", 34.6650, 135.5010)], 3);
+    expect(stations).toHaveLength(2);
+  });
+});
+
+describe("taxi companies to call (no stand nearby)", () => {
+  const company = (name: string, latitude: number, longitude: number, phone: string | null, category: string | null = null) => ({ ...place(name, latitude, longitude), phone, category });
+  // Apple's answer to 「タクシー」 from the mountains near 三峰口 (35.90, 138.90).
+  const mountains = { latitude: 35.9, longitude: 138.9 };
+  const answer = [
+    company("三峰口駅 タクシー乗り場", 35.95969, 138.97901, null, "MKPOICategoryPublicTransport"),
+    company("丸通タクシー 小鹿野営業所", 36.02001, 139.00305, "+81 120598802"),
+    company("アーク代行社", 35.99095, 139.08191, "+81 494 26 7739"),
+    company("観光タクシー西武駅前営業所", 35.98917, 139.0844, "+81 494 22 5611"),
+    company("秩父駅前タクシー乗り場", 35.99867, 139.08565, "+81 120023633", "MKPOICategoryPublicTransport"),
+  ];
+
+  it("keeps companies with a number: not stands, not 代行 (a driver for your own car)", () => {
+    expect(taxiCompaniesFrom(mountains, answer, 20_000, 2).map(({ name, phone }) => [name, phone])).toEqual([
+      ["丸通タクシー 小鹿野営業所", "0120-598-802"],
+      ["観光タクシー西武駅前営業所", "0494-22-5611"],
+    ]);
+  });
+
+  it("only within reach: Apple's far-off answers (Yokohama from 房総) are dropped", () => {
+    const boso = { latitude: 35.19, longitude: 139.96 };
+    expect(taxiCompaniesFrom(boso, [company("北斗タクシー", 35.43299, 139.66455, "+81 45 623 8884")], 20_000, 2)).toEqual([]);
+  });
+
+  it("numbers as dialled at home", () => {
+    expect(domesticPhone("+81 45 623 8884")).toBe("045-623-8884");
+    expect(domesticPhone("+81 120598802")).toBe("0120-598-802");
   });
 });

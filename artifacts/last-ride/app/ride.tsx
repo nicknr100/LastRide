@@ -5,6 +5,7 @@ import { Notice } from "@/components/RideUI";
 import { Card, CountdownRing, IconButton } from "@/components/ui";
 import { DIGITS } from "@/constants/type";
 import { locationErrorText, useLastRide } from "@/context/LastRideContext";
+import { FarStationCard } from "@/components/FarStationCard";
 import { LocationOffCard } from "@/components/LocationOffCard";
 import { usePremium } from "@/context/PremiumContext";
 import { useGroups } from "@/context/GroupsContext";
@@ -115,6 +116,7 @@ export default function RideScreen() {
     isLocating,
     isSearching,
     locationError,
+    nearestByCar,
     requestLocation,
     nowMs,
     demoActive,
@@ -332,6 +334,8 @@ export default function RideScreen() {
   ]);
 
   // "自宅（押上）へ": the saved name plus its station, unless they're the same.
+  // No station within walking reach and no plan: the far-station card takes the hero's place.
+  const farMode = locationError === "no-station" && !isLocationReady && !isLocating;
   const homeStationName = homeStationOption
     ? ja
       ? homeStationOption.nameJa
@@ -753,7 +757,18 @@ export default function RideScreen() {
           </View>
         )}
 
-        {/* Tonight at a glance: start tonight (or the countdown once started), the time to leave, and how late is too late */}
+        {/* No station within walking reach: the nearest one, its last train and how to get there, in the hero's place. */}
+        {farMode ? (
+          <FarStationCard
+            far={nearestByCar}
+            ja={ja}
+            you={userCoordinates}
+            homeStation={ja ? (homeStationOption?.nameJa ?? "") : (homeStationOption?.name ?? "")}
+            fallbackText={locationErrorText("no-station", ja)}
+            onWays={() => router.push("/far-ways")}
+            onRetry={() => void requestLocation()}
+          />
+        ) : (
         <View style={styles.hero}>
           {isLocationReady && !departed && !onBoard && trackingMode === null ? (
             <Pressable
@@ -824,6 +839,7 @@ export default function RideScreen() {
             )}
           </View>
         </View>
+        )}
 
         {/* Tonight on one line, then what the app is doing: tracking (with 停止) or when it last checked (with 更新) */}
         {plan && !departed && !onBoard && <TimelineRail plan={plan} nowMs={clockMs} ja={ja} />}
@@ -1369,7 +1385,7 @@ export default function RideScreen() {
 
 
 
-        {locationError !== "permission" && !isLocationReady && (
+        {locationError !== "permission" && locationError !== "no-station" && !isLocationReady && (
           <Pressable
             testID="enable-location"
             onPress={() => void requestLocation()}

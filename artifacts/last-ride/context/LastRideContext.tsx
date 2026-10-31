@@ -88,6 +88,7 @@ import { getFirstTrain, type TrainTime } from "@/lib/timetable";
 import { endLiveActivity, syncLiveActivity } from "@/lib/liveActivity";
 import { usePremium } from "@/context/PremiumContext";
 import { syncAppleLanguage } from "@/lib/applePlaces";
+import { planFarStation, type FarStationPlan } from "@/lib/farStation";
 import { stationForStorage } from "@/lib/savedStation";
 import {
   clearPlaceCache,
@@ -231,6 +232,8 @@ type RideContextValue = {
   /** A station search is running (any re-plan): the 更新 / tracking line shows a spinner. */
   isSearching: boolean;
   locationError: LocationErrorCode | null;
+  /** No station within walking reach ('no-station'): the nearest one, its last train home, by car and taxi (undefined while looking, null when none). */
+  nearestByCar: FarStationPlan | null | undefined;
   /** Notification times, minutes before leaving (0 = at leave time). */
   reminderIntervals: number[];
   /** Alarm times (iOS); a time is a notification or an alarm, never both. */
@@ -407,6 +410,9 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
     null,
   );
   const [isHydrated, setIsHydrated] = useState(false);
+  const [nearestByCar, setNearestByCar] = useState<FarStationPlan | null | undefined>(null);
+  /** The plan put on screen from storage at launch (for opening offline): checked once from here. */
+  const restoredPlanRef = useRef<NightPlan | null>(null);
   const [notificationsAllowed, setNotificationsAllowed] = useState<
     boolean | null
   >(null);
@@ -489,7 +495,12 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       .finally(() => setIsHydrated(true));
     // A plan saved earlier tonight beats showing nothing when the network is down.
     void readSavedPlan().then((saved) => {
-      if (saved) setPlan((current) => current ?? saved);
+      if (!saved) return;
+      setPlan((current) => {
+        if (current) return current;
+        restoredPlanRef.current = saved;
+        return saved;
+      });
     });
   }, []);
 
@@ -1351,6 +1362,10 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       if (planRef.current && (code === "unavailable" || (trackingModeRef.current !== null && code !== "permission"))) return;
       setLocationError(code);
       setPlan(null);
+      // A definite answer from here (no station within reach, no route, at home): the
+      // plan saved for opening offline is from somewhere else, so it mustn't come back
+      // on the next launch. A failed lookup keeps it.
+      if (code === "no-station" || code === "no-route" || code === "near-home") void clearSavedPlan();
     } finally {
       if (session === sessionRef.current) setIsLocating(false);
     }
@@ -1667,14 +1682,15 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
   const requestLocationRef = useRef(requestLocation);
   requestLocationRef.current = requestLocation;
 
-  // A plan restored from storage can be hours old, so refresh it once on launch.
-  // (Without tracking, nothing else re-plans: same on returning to the app.)
+  // A plan restored from storage may be from somewhere else (it is only for opening
+  // offline), so check it once on launch, however recent. (Without tracking, nothing
+  // else re-plans: on returning to the app, after AUTO_REPLAN_AFTER_MS.)
+  const restoredOnScreen = !!plan && plan === restoredPlanRef.current;
   useEffect(() => {
-    if (!isHydrated || trackingMode !== null) return;
-    const current = planRef.current;
-    if (current && getNow() - current.computedAt >= AUTO_REPLAN_AFTER_MS)
-      void requestLocationRef.current();
-  }, [isHydrated, trackingMode, getNow]);
+    if (!isHydrated || trackingMode !== null || !restoredOnScreen) return;
+    restoredPlanRef.current = null; // once
+    void requestLocationRef.current();
+  }, [isHydrated, trackingMode, restoredOnScreen]);
 
   // Tracking with the app open: location updates only come on movement, so standing
   // still would leave the plan (and "checked N min ago") going stale. Check it again
@@ -1826,6 +1842,27 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
     void shareForegroundPlan(plan).catch(() => undefined);
   }, [trackingMode, plan, demoActive]);
 
+  // No station within walking reach: find the nearest one by car, so the main
+  // screen can say how far it is and point to a taxi rather than a dead end.
+  const farFrom = locationError === "no-station" && userCoordinates ? userCoordinates : null;
+  useEffect(() => {
+    if (!farFrom) {
+      setNearestByCar(null);
+      return;
+    }
+    if (!homeStationOption) return;
+    let current = true;
+    setNearestByCar(undefined);
+    void planFarStation(farFrom, homeStationOption, getNow())
+      .catch(() => null)
+      .then((found) => {
+        if (current) setNearestByCar(found);
+      });
+    return () => {
+      current = false;
+    };
+  }, [farFrom?.latitude, farFrom?.longitude, homeStationOption, getNow]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const resetLanguage = useCallback(() => {
     setLanguageState(null);
     void AsyncStorage.removeItem(STORAGE_KEYS.language);
@@ -1960,6 +1997,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       isLocating,
       isSearching: searches > 0 || isLocating,
       locationError,
+      nearestByCar,
       reminderIntervals,
       alarmsEnabled,
       alarmIntervals,
@@ -2034,6 +2072,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       searches,
       language,
       locationError,
+      nearestByCar,
       notificationsAllowed,
       requestNotifications,
       nowMs,
@@ -2116,8 +2155,8 @@ export function locationErrorText(
         : "Location is not available on this device.";
     case "no-station":
       return ja
-        ? "近くに駅が見つかりませんでした。"
-        : "No station was found nearby.";
+        ? "歩いて行ける距離（約5km以内）に駅が見つかりませんでした。"
+        : "No station within walking distance (about 5 km).";
     case "no-route":
       return ja
         ? "近くの駅から帰る場所の最寄り駅へ行ける電車が見つかりませんでした。"

@@ -29,6 +29,7 @@ function RootLayoutNav() {
       <Stack.Screen name="home-station" />
       <Stack.Screen name="destinations" />
       <Stack.Screen name="alternatives" />
+      <Stack.Screen name="far-ways" />
       <Stack.Screen name="groups" />
       <Stack.Screen name="group/[id]" />
       <Stack.Screen name="group-new" />

@@ -399,6 +399,19 @@ describe('choosing between stations', () => {
     expect(plan.station.nameJa).toBe('恵比寿');
   });
 
+  test('a last train that can no longer be reached on foot gives way to one that can; at the station, it stays', () => {
+    // 23:50: 渋谷's 23:52 train is a 5-minute walk away (can't be made); 恵比寿's 00:05 is 12 minutes away.
+    const tooLate = choice({ station: shibuya, walkingMinutes: 5, lastTrain: train(LAST_TRAIN), leaveByMs: LEAVE_BY });
+    const reachable = choice({ station: ebisu, walkingMinutes: 12, lastTrain: train(LAST_TRAIN + 13 * MINUTE_MS), leaveByMs: LEAVE_BY + 13 * MINUTE_MS });
+    expect(repick(planFrom([tooLate, reachable], { computedAt: jst(2026, 9, 23, 23, 50) }), null).station.nameJa).toBe('恵比寿');
+    // A minute's walk from the 23:52 train at 23:50: still makeable, so 渋谷 stays.
+    const atStation = choice({ station: shibuya, walkingMinutes: 1, lastTrain: train(LAST_TRAIN), leaveByMs: LEAVE_BY });
+    expect(repick(planFrom([atStation, reachable], { computedAt: jst(2026, 9, 23, 23, 50) }), null).station.nameJa).toBe('渋谷');
+    // Neither makeable: the closest still running, as before.
+    const alsoLate = choice({ station: ebisu, walkingMinutes: 12, lastTrain: train(LAST_TRAIN + 5 * MINUTE_MS), leaveByMs: LEAVE_BY + 5 * MINUTE_MS });
+    expect(repick(planFrom([tooLate, alsoLate], { computedAt: jst(2026, 9, 23, 23, 50) }), null).station.nameJa).toBe('渋谷');
+  });
+
   test('even a much later farther station is only suggested (lib/stationSuggestion), not switched to', () => {
     const close = choice({ station: shibuya, walkingMinutes: 5, leaveByMs: LEAVE_BY });
     const farther = choice({ station: ebisu, walkingMinutes: 12, leaveByMs: LEAVE_BY + 40 * MINUTE_MS });
