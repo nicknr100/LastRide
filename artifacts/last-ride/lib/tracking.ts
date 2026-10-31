@@ -98,8 +98,11 @@ async function recomputeFromLocation(roughCoordinates: Coordinates, accuracyMete
     await clearTrackingSnapshot();
     return;
   }
-  // 〔乗った〕: on the earlier train, the night is over (lib/boarding.ts).
-  if (await readBoarded(now)) {
+  // 〔乗った〕: on the earlier train, the night is over (lib/boarding.ts). Only an
+  // answer for a train after tracking started: one from before belongs to an
+  // earlier ride, and would switch a new session off at its first update.
+  const boarded = await readBoarded(now);
+  if (boarded && (startedAt === null || boarded.trainDepartsAt >= startedAt)) {
     await stopBackgroundTracking();
     await clearTrackingSnapshot();
     await cancelAllReminders().catch(() => undefined);

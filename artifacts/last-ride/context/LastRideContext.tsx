@@ -1524,6 +1524,11 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       const recordSuccessfulStart = async () => {
         if (op !== trackingOp.current) return;
         if (!resume) {
+          // Starting again after 〔乗った〕 earlier tonight: that answer is over. Left in
+          // place, the background task's first update (seconds later) would read it as
+          // on board and switch tracking (and the Live Activity) off again.
+          setBoarded(null);
+          await writeBoarded(null);
           await markTrackingStarted(startedAt);
           // The new session must not adopt an old night's background snapshot.
           await clearTrackingSnapshot();

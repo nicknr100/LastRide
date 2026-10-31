@@ -120,3 +120,28 @@ describe('a plan made in the open app', () => {
     expect(await readTrackingSnapshot()).toBeNull();
   });
 });
+
+describe('an earlier 〔乗った〕 answer', () => {
+  const night = (ms: number) => {
+    const japan = new Date(ms + 9 * 3600_000 - 4 * 3600_000);
+    return `${japan.getUTCFullYear()}${String(japan.getUTCMonth() + 1).padStart(2, '0')}${String(japan.getUTCDate()).padStart(2, '0')}`;
+  };
+
+  test('for a train before tracking started: ignored, the new session carries on', async () => {
+    mocks.storage.set('lastride-tracking-started-at', String(NOW - 10 * MINUTE_MS));
+    mocks.storage.set('lastride-boarded', JSON.stringify({ night: night(NOW), choice: 1, trainDepartsAt: NOW - 60 * MINUTE_MS }));
+    mocks.storage.set(SNAPSHOT_KEY, JSON.stringify(plan(station('Nishi-Waseda', '西早稲田'), NOW - MINUTE_MS)));
+    await update({ latitude: 35.7001, longitude: 139.7001, accuracy: 30 });
+    expect(mocks.storage.get('lastride-tracking-active')).toBe('true');
+    expect(mocks.syncLiveActivity).toHaveBeenCalled();
+  });
+
+  test('for a train after tracking started: the night is over, tracking stops', async () => {
+    mocks.storage.set('lastride-tracking-started-at', String(NOW - 60 * MINUTE_MS));
+    mocks.storage.set('lastride-boarded', JSON.stringify({ night: night(NOW), choice: 1, trainDepartsAt: NOW - 5 * MINUTE_MS }));
+    mocks.storage.set(SNAPSHOT_KEY, JSON.stringify(plan(station('Nishi-Waseda', '西早稲田'), NOW - MINUTE_MS)));
+    await update({ latitude: 35.7001, longitude: 139.7001, accuracy: 30 });
+    expect(mocks.syncLiveActivity).not.toHaveBeenCalled();
+    expect(mocks.storage.has(SNAPSHOT_KEY)).toBe(false);
+  });
+});
