@@ -1841,11 +1841,13 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
   }, [trackingMode, getNow]);
 
   // And the other way: a plan made here (更新, a station chosen) is the background
-  // task's next starting point, so it doesn't bring the old station back.
+  // task's next starting point, so it doesn't bring the old station back. The plan
+  // as found (basePlan), like the task's own snapshot: the task applies tonight's
+  // train choice itself, and a plan already set to 1本前 would be applied twice.
   useEffect(() => {
-    if (trackingMode !== "background" || !plan || demoActive) return;
-    void shareForegroundPlan(plan).catch(() => undefined);
-  }, [trackingMode, plan, demoActive]);
+    if (trackingMode !== "background" || !basePlan || demoActive) return;
+    void shareForegroundPlan(basePlan).catch(() => undefined);
+  }, [trackingMode, basePlan, demoActive]);
 
   // No station within walking reach: find the nearest one by car, so the main
   // screen can say how far it is and point to a taxi rather than a dead end.
