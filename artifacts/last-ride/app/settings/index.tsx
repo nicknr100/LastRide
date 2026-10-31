@@ -7,6 +7,7 @@ import { SUPPORT_URL, TERMS_URL, TOKUSHOHO_URL, siteLink } from '@/lib/links';
 import { alarmKitAvailable, scheduledNotificationLines, sendTestNotifications } from '@/lib/notifications';
 import { formatJstTime, MINUTE_MS } from '@/lib/time';
 import { isTestFlightBuild } from '@/modules/last-ride-alarm/src';
+import { clearDebugEvents, readDebugEvents } from '@/lib/debugEvents';
 import { recommendedLeaveTime } from '@/lib/reliability';
 import { WIDGET_THEMES } from '@/lib/widgetThemes';
 import { Feather } from '@expo/vector-icons';
@@ -44,6 +45,7 @@ export default function SettingsScreen() {
   const ja = language === 'ja';
   const [testSetFor, setTestSetFor] = React.useState<number | null>(null);
   const [queued, setQueued] = React.useState<string[] | null>(null);
+  const [events, setEvents] = React.useState<string[] | null>(null);
 
   const remindersNeedAttention =
     notificationsAllowed === false || (alarmsEnabled && alarmKitAvailable && alarmStatus === 'denied');
@@ -210,6 +212,20 @@ export default function SettingsScreen() {
             title={ja ? '予約中の通知を見る' : 'Show queued notifications'}
             subtitle={queued === null ? (ja ? 'iOSに予約されている時刻と種類' : 'What iOS has queued: time and kind') : queued.length === 0 ? (ja ? 'なし' : 'None') : queued.join('\n')}
             onPress={() => void scheduledNotificationLines().then(setQueued)}
+          />
+          <Divider />
+          {/* What started, updated or ended the Live Activity, and why (newest last). */}
+          <Row
+            testID="debug-events"
+            title={ja ? 'ライブアクティビティの記録を見る' : 'Show Live Activity log'}
+            subtitle={events === null ? (ja ? '開始・更新・終了とその理由（最新40件）' : 'Start, update, end and why (last 40)') : events.length === 0 ? (ja ? 'なし' : 'None') : events.join('\n')}
+            onPress={() => void readDebugEvents().then(setEvents)}
+          />
+          <Divider />
+          <Row
+            testID="clear-debug-events"
+            title={ja ? '記録を消す' : 'Clear the log'}
+            onPress={() => void clearDebugEvents().then(() => setEvents([]))}
           />
           <Divider />
           {/* Prices in dollars on a Japanese account: which App Store country StoreKit uses. */}

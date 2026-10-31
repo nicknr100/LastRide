@@ -28,6 +28,7 @@ import type { Coordinates } from '@/lib/stations';
 import { formatJstTime, serviceDate } from '@/lib/time';
 import { syncSharedLeaveBy } from '@/lib/groupSharing';
 import { usableTrackingSnapshot } from '@/lib/trackingSnapshotGuard';
+import { debugEvent } from '@/lib/debugEvents';
 import { backgroundTrackingNotification, backgroundTrackingProfileKey } from '@/lib/backgroundTrackingCopy';
 
 export const LOCATION_TASK = 'lastride-night-tracking';
@@ -94,7 +95,7 @@ async function recomputeFromLocation(roughCoordinates: Coordinates, accuracyMete
   // The snapshot goes too: left behind, tomorrow night's first update would read
   // tonight's plan, find its night over, and switch tracking off again.
   if ((previous && now >= trackingEndsAt(previous)) || (startedAt !== null && now >= trackingHardStopAt(startedAt))) {
-    await stopBackgroundTracking();
+    await stopBackgroundTracking(`night over (ends ${previous ? new Date(trackingEndsAt(previous)).toISOString() : '-'}, started ${startedAt === null ? '-' : new Date(startedAt).toISOString()})`);
     await clearTrackingSnapshot();
     return;
   }
@@ -103,7 +104,7 @@ async function recomputeFromLocation(roughCoordinates: Coordinates, accuracyMete
   // earlier ride, and would switch a new session off at its first update.
   const boarded = await readBoarded(now);
   if (boarded && (startedAt === null || boarded.trainDepartsAt >= startedAt)) {
-    await stopBackgroundTracking();
+    await stopBackgroundTracking('boarded');
     await clearTrackingSnapshot();
     await cancelAllReminders().catch(() => undefined);
     return;
@@ -215,7 +216,11 @@ if (Platform.OS !== 'web') {
     const { locations } = data as { locations?: Array<{ coords: { latitude: number; longitude: number; accuracy?: number | null } }> };
     const latest = locations?.[locations.length - 1];
     if (!latest) return;
-    if (!(await isTrackingFlagOn())) return;
+    if (!(await isTrackingFlagOn())) {
+      debugEvent('bg update ignored: tracking flag off');
+      return;
+    }
+    debugEvent(`bg update (±${Math.round(latest.coords.accuracy ?? -1)}m)`);
     try {
       await recomputeFromLocation({ latitude: latest.coords.latitude, longitude: latest.coords.longitude }, latest.coords.accuracy);
     } catch {
@@ -358,9 +363,9 @@ export async function startBackgroundTracking(profile: LocationProfile = 'normal
   }
 }
 
-export async function stopBackgroundTracking(): Promise<void> {
+export async function stopBackgroundTracking(reason = "unspecified"): Promise<void> {
   await AsyncStorage.setItem(TRACKING_ACTIVE_KEY, 'false').catch(() => undefined);
-  await endLiveActivity().catch(() => undefined);
+  await endLiveActivity(`stopBackgroundTracking: ${reason}`).catch(() => undefined);
   if (Platform.OS === 'web') return;
   try {
     const started = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK);

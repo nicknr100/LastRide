@@ -27,6 +27,7 @@ import {
   showCountdown,
 } from "@/modules/countdown-notification/src";
 import { MINUTE_MS } from "@/lib/time";
+import { debugEvent } from "@/lib/debugEvents";
 
 export const liveActivityEnabled =
   Platform.OS === "ios" &&
@@ -57,14 +58,15 @@ export async function syncLiveActivity(
   if (!liveActivityEnabled && !countdownNotificationAvailable) return;
   const content = liveActivityContent(plan, language, nowMs, theme ?? (await readWidgetTheme()), whileOpenOnly);
   if (!content) {
-    await endLiveActivity();
+    await endLiveActivity(`no content (${plan.station.nameJa} ${plan.trainChoice ?? 0} ${new Date(plan.lastTrain.departsAt).toISOString()})`);
     return;
   }
   // Only end for "not Premium" when that's known for sure (the open app). The
   // background task only has a saved flag; a running activity keeps updating,
   // and a closed app can't start one anyway.
   if (!(premium ?? (await readPremiumCache()))) {
-    if (premium === false) await endLiveActivity();
+    if (premium === false) await endLiveActivity("not premium");
+    else debugEvent("sync skipped: premium cache says no");
     return;
   }
   if (countdownNotificationAvailable) {
@@ -96,6 +98,7 @@ export async function syncLiveActivity(
   // Stale only once the night's real last train has gone (with 1本前 / 2本前 the
   // plan's own train goes first, and the later ones are still shown).
   const staleDate = new Date((plan.nightLastTrain ?? plan.lastTrain).departsAt + 5 * MINUTE_MS);
+  debugEvent(`${running ? "update" : "start"}: ${content.label} ${content.countdownTo > nowMs ? Math.round((content.countdownTo - nowMs) / 1000) + "s" : "past"}`);
   if (running) {
     await running.update(props, staleDate);
   } else {
@@ -105,7 +108,8 @@ export async function syncLiveActivity(
 }
 
 /** Ends every LastRide activity, removing it from the lock screen immediately. */
-export async function endLiveActivity(): Promise<void> {
+export async function endLiveActivity(reason = "unspecified"): Promise<void> {
+  debugEvent(`end: ${reason}`);
   if (countdownNotificationAvailable) {
     shownSignature = null;
     dismissCountdown();

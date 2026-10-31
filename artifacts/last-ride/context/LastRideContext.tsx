@@ -88,6 +88,7 @@ import { getFirstTrain, type TrainTime } from "@/lib/timetable";
 import { endLiveActivity, syncLiveActivity } from "@/lib/liveActivity";
 import { usePremium } from "@/context/PremiumContext";
 import { syncAppleLanguage } from "@/lib/applePlaces";
+import { debugEvent } from "@/lib/debugEvents";
 import { planFarStation, type FarStationPlan } from "@/lib/farStation";
 import { stationForStorage } from "@/lib/savedStation";
 import {
@@ -711,7 +712,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
   useEffect(() => {
     if (!trackingRestored) return;
     if (!trackingMode || !plan || demoActive || (premiumKnown && !isPremium)) {
-      void endLiveActivity();
+      void endLiveActivity(`app: tracking=${trackingMode} plan=${!!plan} demo=${demoActive} premiumKnown=${premiumKnown} premium=${isPremium}`);
       return;
     }
     // Premium not known yet (just opened, or RevenueCat unreachable): the saved
@@ -1432,7 +1433,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
     removeWatches();
     setTrackingMode(null);
     setTrackingStartedAt(null);
-    await stopBackgroundTracking();
+    await stopBackgroundTracking('stopTracking (停止, 乗った, night over or reset)');
     await clearTrackingSnapshot();
   }, [removeWatches]);
 
@@ -1440,6 +1441,10 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
   // tonight's reminders and alarms from the last plan still go off; the
   // location-off card says the times no longer follow the user. Once location
   // is back, the recheck below starts the watch again (startTracking resume).
+
+  useEffect(() => {
+    debugEvent(`tracking mode: ${trackingMode} (background allowed: ${backgroundAllowed})`);
+  }, [trackingMode, backgroundAllowed]);
 
   // Background permission can be revoked independently of foreground access:
   // downgrade honestly to app-open tracking, preserving the foreground watch.
@@ -1456,7 +1461,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
           setBackgroundAllowed(true);
           return;
         }
-        await stopBackgroundTracking();
+        await stopBackgroundTracking('background permission not granted: downgraded to app-open tracking');
         if (!cancelled && operation === trackingOp.current) {
           setTrackingMode((current) => current === 'background' ? 'foreground' : current);
         }
@@ -1552,7 +1557,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
       if (locationMode === 'foreground' && Platform.OS !== 'web') {
         // Never leave a previously registered native background task running
         // after the user explicitly chose open-app-only tracking.
-        await stopBackgroundTracking();
+        await stopBackgroundTracking('start in app-open mode');
         if (op !== trackingOp.current) return;
       }
       if (Platform.OS === "web") {
@@ -1610,7 +1615,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
         setTrackingStartedAt(null);
         // A resumed native background task may still be registered even if
         // foreground permission was revoked while this app was closed.
-        await stopBackgroundTracking().catch(() => undefined);
+        await stopBackgroundTracking('resume without location permission').catch(() => undefined);
         return;
       }
       foregroundWatch.current = watchResult.subscription;
@@ -1628,7 +1633,7 @@ export function LastRideProvider({ children }: React.PropsWithChildren) {
         : false;
       if (op !== trackingOp.current) {
         releaseOwnedWatch(foregroundWatch, watchResult.subscription);
-        if (backgroundActive) await stopBackgroundTracking(); // compensate a stale start
+        if (backgroundActive) await stopBackgroundTracking('stale start'); // compensate a stale start
         return;
       }
       setTrackingMode(backgroundActive ? "background" : "foreground");
