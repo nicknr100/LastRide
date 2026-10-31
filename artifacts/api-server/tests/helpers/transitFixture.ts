@@ -97,10 +97,15 @@ export const fixtureSnapshot: TransitSnapshot = assembleSnapshot(
   "2026-10-01T00:00:00.000Z",
 );
 
-/** Writes the fixture as a .json.gz like transit:build does; returns its path. */
+/**
+ * Writes the fixture as a .json.gz like transit:build does; returns its path.
+ * Stamped as built now: the server refuses snapshots over 30 days old
+ * (src/lib/transitFreshness), so a fixed date would fail every test that loads
+ * it a month on. Its timetable (2026-10-09 trains) is unchanged.
+ */
 export async function writeFixtureSnapshot(): Promise<string> {
   const dir = await mkdtemp(path.join(tmpdir(), "lastride-transit-"));
   const file = path.join(dir, "transit-snapshot.json.gz");
-  await writeSnapshot(file, fixtureSnapshot);
+  await writeSnapshot(file, { ...fixtureSnapshot, generatedAt: new Date().toISOString() });
   return file;
 }
