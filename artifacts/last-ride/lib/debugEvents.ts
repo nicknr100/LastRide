@@ -2,10 +2,25 @@
  * A short on-device record of Live Activity and tracking events (start,
  * update, end and why), for chasing problems that only happen on a phone:
  * release builds don't send JavaScript logs to the system log. Read in the
- * TestFlight test tools (Settings). Kept on the phone, last 40 entries only.
+ * TestFlight test tools (Settings). Kept on the phone, last 40 entries only;
+ * recorded on TestFlight and development builds only.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
+
+/** Only TestFlight and development builds keep the record: App Store users never write it. */
+let recording: boolean | null = null;
+function isRecording(): boolean {
+  if (recording !== null) return recording;
+  if (typeof __DEV__ !== 'undefined' && __DEV__) return (recording = true);
+  try {
+    // Loaded here, not at the top: the native module isn't there in Node tests.
+    recording = (require('@/modules/last-ride-alarm/src') as typeof import('@/modules/last-ride-alarm/src')).isTestFlightBuild;
+  } catch {
+    recording = false;
+  }
+  return recording;
+}
 
 const KEY = 'lastride-debug-events';
 const LIMIT = 40;
@@ -23,6 +38,7 @@ function stamp(ms: number): string {
  * Activity in the background), so the line is saved first.
  */
 export function debugEvent(message: string): Promise<void> {
+  if (!isRecording()) return Promise.resolve();
   const line = `${stamp(Date.now())} [${AppState.currentState}] ${message}`;
   chain = chain
     .then(async () => {
