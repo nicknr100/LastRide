@@ -13,6 +13,7 @@ import { LastRideProvider } from '@/context/LastRideContext';
 import { PremiumProvider } from '@/context/PremiumContext';
 import { GroupsProvider } from '@/context/GroupsContext';
 import { initCrashReporting, reportError } from '@/lib/crashReporting';
+import { debugEvent } from '@/lib/debugEvents';
 
 initCrashReporting();
 
@@ -56,6 +57,9 @@ function RootLayoutNav() {
     </Stack>
   );
 }
+
+// A new app process (cold launch, or relaunched in the background by location): see lib/debugEvents.
+void debugEvent('app process started');
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

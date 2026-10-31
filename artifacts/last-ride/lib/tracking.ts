@@ -115,6 +115,7 @@ async function recomputeFromLocation(roughCoordinates: Coordinates, accuracyMete
   const previousPlan = previous ? applyTrainChoice(previous, before, effectiveTrainChoice(before, choiceAt(settings.trainChoice, override, previous.station.nameJa))) : null;
   // Rough positions while leaving is over an hour away; the usual detail after that.
   if (previousPlan) await applyLocationProfile(locationProfile(previousPlan, now));
+  void debugEvent(`bg: previous=${previous ? previous.station.nameJa : 'none'} replan=${shouldReplan(previous, coordinates, now)}`);
   if (!shouldReplan(previous, coordinates, now)) {
     // No re-plan, but the lock screen moves on (出るまで → the train → the next one):
     // the Live Activity holds one countdown, so bring it up to date (skipped if unchanged).
@@ -127,6 +128,7 @@ async function recomputeFromLocation(roughCoordinates: Coordinates, accuracyMete
     ? keepOnTheWay(previous, coordinates, now, previousPlan.lastTrain.departsAt)
     : null;
   if (!kept) coordinates = await betterFix(coordinates, accuracyMeters);
+  void debugEvent(kept ? 'bg: held (on the way)' : 'bg: re-planning');
   const basePlan = kept ?? await planNight(coordinates, settings.homeStation, settings.leaveMargin, now, { pinned: settings.pinnedStation, homeAddress: settings.homeAddress, previous });
   if (!(await isTrackingFlagOn())) return; // stopped while we were computing
   // The station locked for tonight can't get you home any more: back to automatic, and say so.

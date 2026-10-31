@@ -89,9 +89,13 @@ export async function syncLiveActivity(
     return;
   }
   const activities = factory();
-  const running = activities.getInstances()[0];
+  const instances = activities.getInstances();
+  const running = instances[0];
   const signature = contentSignature(content);
-  if (running && shownSignature === signature) return;
+  if (running && shownSignature === signature) {
+    void debugEvent(`sync: unchanged (${instances.length} running)`);
+    return;
+  }
 
   const props = { ...content, shownAt: nowMs };
   // If the app never wakes again, iOS dims the countdown shortly after the last train.
@@ -100,7 +104,10 @@ export async function syncLiveActivity(
   const staleDate = new Date((plan.nightLastTrain ?? plan.lastTrain).departsAt + 5 * MINUTE_MS);
   debugEvent(`${running ? "update" : "start"}: ${content.label} ${content.countdownTo > nowMs ? Math.round((content.countdownTo - nowMs) / 1000) + "s" : "past"}`);
   if (running) {
-    await running.update(props, staleDate);
+    await running.update(props, staleDate).catch(async (error: unknown) => {
+      await debugEvent(`update failed: ${String(error)}`);
+      throw error;
+    });
   } else {
     activities.start(props, "last-ride://ride", staleDate);
   }
@@ -109,7 +116,7 @@ export async function syncLiveActivity(
 
 /** Ends every LastRide activity, removing it from the lock screen immediately. */
 export async function endLiveActivity(reason = "unspecified"): Promise<void> {
-  debugEvent(`end: ${reason}`);
+  await debugEvent(`end: ${reason}`);
   if (countdownNotificationAvailable) {
     shownSignature = null;
     dismissCountdown();

@@ -17,8 +17,12 @@ function stamp(ms: number): string {
   return `${pad(japan.getUTCHours())}:${pad(japan.getUTCMinutes())}:${pad(japan.getUTCSeconds())}`;
 }
 
-/** Records `message` with the time and whether the app is in front. Never throws. */
-export function debugEvent(message: string): void {
+/**
+ * Records `message` with the time and whether the app is in front. Never throws.
+ * Await it before something that could get the app suspended (ending the Live
+ * Activity in the background), so the line is saved first.
+ */
+export function debugEvent(message: string): Promise<void> {
   const line = `${stamp(Date.now())} [${AppState.currentState}] ${message}`;
   chain = chain
     .then(async () => {
@@ -28,6 +32,7 @@ export function debugEvent(message: string): void {
       await AsyncStorage.setItem(KEY, JSON.stringify(list.slice(-LIMIT)));
     })
     .catch(() => undefined);
+  return chain;
 }
 
 export async function readDebugEvents(): Promise<string[]> {
