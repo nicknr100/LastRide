@@ -44,7 +44,8 @@ the background task's starting point.
 
 The automatic pick is the closest station whose last train hasn't left and can
 still be reached on foot (the walk alone, so someone at the station keeps it);
-with none reachable, the closest still running. The station in use stays until another is at least 3 minutes closer on foot, so two
+with none reachable, the closest station, its last train shown as gone, never a
+farther one whose train hasn't left but can't be made either. The station in use stays until another is at least 3 minutes closer on foot, so two
 nearby stations don't swap back and forth (each swap moving the leave time and
 sending a notice). A farther station is never switched to by itself, however
 much later it runs (`lib/planner.ts` `autoPick`).

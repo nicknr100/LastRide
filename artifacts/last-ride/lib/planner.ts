@@ -291,17 +291,20 @@ function autoPick(options: StationChoice[], stay: StationOption | null): Station
 /** Builds the plan from evaluated stations, honouring a pinned station if it can still get the user home. */
 function assemble(options: StationChoice[], pinned: StationOption | null, coordinates: Coordinates, computedAt: number, stay: StationOption | null = null): NightPlan {
   const sorted = [...options].sort((first, second) => first.walkingMinutes - second.walkingMinutes);
-  // A station whose last train has already left is never the automatic pick while
-  // another still has one (e.g. after missing it, a farther line runs later).
-  const running = sorted.filter((option) => option.lastTrain.departsAt > computedAt);
-  // Nor one whose train can't be reached on foot any more (0:10, a 5-minute walk
-  // to a 0:12 train) while another's still can. The walk alone decides, without
-  // the platform buffer, so someone already at the station keeps it.
-  const reachable = running.filter((option) => option.lastTrain.departsAt - option.walkingMinutes * MINUTE_MS >= computedAt);
-  const auto = autoPick(reachable.length > 0 ? reachable : running.length > 0 ? running : sorted, stay);
-  // A pinned station whose last train has gone, while another still runs, can't get
-  // the user home: back to automatic (the app and the background task say so).
-  const pinnedChoice = pinned ? (running.length > 0 ? running : sorted).find((option) => sameStation(option.station, pinned)) : undefined;
+  // Stations whose last train can still be reached on foot (0:10, a 5-minute walk
+  // to a 0:12 train can't). The walk alone decides, without the platform buffer,
+  // so someone already at the station keeps it. A station whose train has gone, or
+  // can't be made, gives way to one that can (after missing it, a farther line
+  // running later). With none left, the closest station stays, its last train
+  // shown as gone (乗れなかったら), rather than a farther one whose train hasn't
+  // left but can't be reached either: 山手 (gone 0:09) never turns into 石川町
+  // (0:11, a 15-minute walk) for two minutes and back.
+  const reachable = sorted.filter((option) =>
+    option.lastTrain.departsAt > computedAt && option.lastTrain.departsAt - option.walkingMinutes * MINUTE_MS >= computedAt);
+  const auto = reachable.length > 0 ? autoPick(reachable, stay) : sorted[0];
+  // A pinned station whose last train can't be made, while another's still can, can't
+  // get the user home: back to automatic (the app and the background task say so).
+  const pinnedChoice = pinned ? (reachable.length > 0 ? reachable : sorted).find((option) => sameStation(option.station, pinned)) : undefined;
   const chosen = pinnedChoice ?? auto;
   const { station, walkingMinutes, distanceMeters, walkingSource, walkPath, lastTrain, leaveByMs, recommendedLeaveByMs, safetyMarginMinutes, disruptionLines, destination, walkHomeMinutes, arriveHomeMs } = chosen;
   return {
