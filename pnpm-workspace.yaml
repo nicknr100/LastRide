@@ -9,7 +9,7 @@ autoInstallPeers: false
 
 catalog:
   "@tanstack/react-query": ^5.105.0
-  "@types/node": ^25.3.3
+  "@types/node": ^25.9.9
   drizzle-orm: ^0.45.4
   # Must be this exact version because expo requires it
   react-dom: 19.2.3
