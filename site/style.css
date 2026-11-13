@@ -1,18 +1,20 @@
 /*
- * 帰り時 / LastRide website. Light pages with the app's navy and amber,
- * a sticky header and a navy footer. Sizes are fluid (clamp) so text and
- * spacing scale with the window; layouts switch at 900px.
+ * 帰り時 / LastRide website. One flat dark theme (like the app) with a single
+ * amber accent: no gradients, glows or glass. Sizes are fluid (clamp) so text
+ * and spacing scale with the window; layouts switch at 900px.
+ * The colour overrides for the dark theme are at the end of this file.
  */
 :root {
-  --bg: #f6f8fb;
-  --surface: #ffffff;
-  --border: #e3e8ef;
-  --text: #0a1322;
-  --muted: #5b6b80;
-  --navy: #0a1322;
-  --navy-2: #13213a;
-  --amber: #f5a93b;
-  --amber-soft: #fde7c4;
+  color-scheme: dark;
+  --bg: #121212;
+  --surface: #1a1a1a;
+  --border: #2e2e2e;
+  --text: #ece8df;
+  --muted: #a8a39a;
+  --navy: #121212;
+  --navy-2: #1f1f1f;
+  --amber: #f0a23a;
+  --amber-soft: rgba(240, 162, 58, 0.14);
   --gutter: clamp(16px, 4vw, 48px);
   --radius: 20px;
 }
@@ -309,3 +311,61 @@ main.doc .contact-form .form-title { margin: 0; padding: 0; border: 0; font-size
 .store-badge { display: inline-flex; line-height: 0; border-radius: 10px; }
 .store-badge img { display: block; height: 3.25rem; width: auto; }
 .store-badge:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+
+/* ---------------------------------------------------------------------------
+ * Dark theme: replaces the light theme's hard-coded colours above.
+ * Surfaces: #121212 page, #161616 alternate band, #1a1a1a cards, #0e0e0e footer.
+ * ------------------------------------------------------------------------- */
+a { color: var(--amber); }
+header.site { background: rgba(18, 18, 18, 0.94); backdrop-filter: none; border-bottom-color: var(--border); }
+.brand span, nav.main a:hover { color: var(--amber); }
+.lang-toggle { border-color: #3a3a3a; }
+.lang-toggle a { color: var(--muted); }
+.lang-toggle a[aria-current] { background: var(--amber); color: #121212; }
+.btn-dark { background: var(--surface); color: var(--text); border-color: var(--border); }
+.btn-dark:hover { background: #222; }
+.btn-amber { color: #121212; }
+.btn-ghost, .cta .btn-ghost { border-color: #4a4a4a; color: var(--text); }
+.store { background: var(--text); color: #121212; }
+.store svg { fill: #121212; }
+.mark, .mark.mark-dark { background: none; color: var(--amber); padding: 0; }
+.hero h1 .accent, .team-hero h1 .accent { color: var(--amber); }
+section.block.alt { background: #161616; border-color: var(--border); }
+section.alt .step, section.alt .plan:not(.pro) { background: var(--surface); }
+.step .num { background: #242424; color: var(--amber); }
+.feature .icon { background: var(--amber-soft); }
+.feature .icon svg { stroke: var(--amber); }
+.tag-pro { background: var(--amber); color: #121212; }
+.chips li { border-color: #3a3a3a; color: var(--text); background: transparent; }
+.chips li.apple { border-color: var(--amber); background: var(--amber-soft); }
+.plan.pro { background: #1a1a1a; color: var(--text); border: 1.5px solid var(--amber); }
+.plan.pro .per, .bill-note.quiet { color: var(--muted); }
+.bill { border-color: #3a3a3a; background: rgba(255, 255, 255, 0.02); }
+.bill-price small { color: var(--muted); }
+.bill-tag { color: #121212; }
+.cta { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.cta .sub { color: var(--muted); }
+.cta .store { background: var(--text); color: #121212; }
+.cta .store svg { fill: #121212; }
+.shot img { border-color: #2a2a2a; box-shadow: none; }
+footer.site { background: #0e0e0e; color: var(--muted); border-top: 1px solid var(--border); }
+footer.site .top, footer.site .f-bottom { border-color: #262626; }
+footer.site .brand, footer.site nav a, footer.site .f-cols a, footer.site .social a { color: var(--text); }
+footer.site .f-tag { color: var(--muted); }
+footer.site .f-head, footer.site .f-data { color: #85807a; }
+footer.site .social a { border-color: #333; }
+th { background: #161616; }
+.founder-card { background: var(--surface); }
+.founder-role { color: var(--amber); }
+.founder-link { background: transparent; border-color: #3a3a3a; }
+.contact-form { box-shadow: none; }
+.contact-form input:not([type="radio"]):not([type="hidden"]), .contact-form textarea { background: #121212; border-color: #3a3a3a; }
+.contact-form input::placeholder, .contact-form textarea::placeholder { color: #6f6b64; }
+.contact-form input:not([type="radio"]):focus, .contact-form textarea:focus { background: #161616; }
+.contact-form .chip-option span { background: #121212; border-color: #3a3a3a; }
+.contact-form .chip-option:hover span { border-color: #555; }
+.contact-form .chip-option input:checked + span { background: var(--amber); border-color: var(--amber); color: #121212; }
+.contact-form .form-status.ok { background: rgba(80, 180, 110, 0.14); color: #8fdcaa; }
+.contact-form .form-status.error { background: rgba(230, 90, 70, 0.14); color: #f2a197; }
+.phone { box-shadow: none; }
+.lock-buttons i { background: rgba(255, 255, 255, 0.12); }

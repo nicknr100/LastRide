@@ -4,21 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>帰り時 LastRide | 終電に間に合う時刻をお知らせするアプリ</title>
-<meta name="description" content="帰り時（LastRide）は、今いる場所から終電に間に合う「出発時刻」をお知らせするiPhoneアプリ。通知やマナーモードでも鳴るアラーム、乗れなかったときの始発・タクシー・朝まで過ごせる場所まで。">
+<meta name="description" content="帰り時（LastRide）は、今いる場所から終電に間に合う「出る時刻」をお知らせするiPhoneアプリ。通知やマナーモードでも鳴るアラーム、乗れなかったときの始発・タクシー・朝まで過ごせる場所まで。">
 <meta property="og:title" content="帰り時 LastRide | 終電に間に合う時刻をお知らせするアプリ">
-<meta property="og:description" content="今いる場所から、終電に間に合う出発時刻をお知らせします。">
+<meta property="og:description" content="今いる場所から、終電に間に合う出る時刻をお知らせします。">
 <meta property="og:image" content="https://lastride.jp/app-icon.png">
+<meta name="theme-color" content="#121212">
 <meta property="og:type" content="website">
 <link rel="alternate" hreflang="ja" href="https://lastride.jp/">
 <link rel="alternate" hreflang="en" href="https://lastride.jp/en/">
 <link rel="alternate" hreflang="x-default" href="https://lastride.jp/">
-<link rel="stylesheet" href="/style.css?v=14">
-<link rel="stylesheet" href="/night-home.css?v=3">
+<link rel="stylesheet" href="/style.css?v=15">
+<link rel="stylesheet" href="/home.css?v=2">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/favicon.png" sizes="64x64" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
-<body class="night-landing">
+<body class="home">
 <header class="site">
   <div class="container">
     <a class="brand" href="/"><img src="/favicon.png" alt="" width="32" height="32"><b>LASTRIDE</b><span>帰り時</span></a>
@@ -33,155 +34,113 @@
   </div>
 </header>
 <main>
-<section class="night-hero" aria-labelledby="night-title">
-  <div class="night-shell">
-    <div class="night-intro">
-      <div class="night-copy">
-        <p class="night-kicker">日本の終電に、間に合うためのアプリ</p>
-        <h1 id="night-title" class="night-title">終電の時刻と、<span>出発する時刻は違う。</span></h1>
+<section class="home-hero" aria-labelledby="hero-title">
+  <div class="wrap">
+    <div class="hero-copy">
+      <p class="hero-kicker">終電アラーム・終電通知</p>
+      <h1 id="hero-title" class="hero-title"><span class="line"><em>帰る時間</em>は、</span><span class="line">アプリが見てる。</span></h1>
+      <p class="hero-lead">今いる場所から駅までの徒歩と乗り換えを計算して、終電に間に合う「出る時刻」をお知らせ。前もって通知し、時間になったらマナーモードでもアラームが鳴ります。</p>
+      <div class="hero-stores">
+        <span class="store ios-soon" aria-disabled="true" data-store-placeholder="appStore">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+          <span><small>iPhone版</small><strong>App Store</strong></span>
+        </span>
+        <span class="store soon" aria-disabled="true" data-store-placeholder="googlePlay">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18c0 .55.45 1 1 1h1v3.5a1.5 1.5 0 0 0 3 0V19h2v3.5a1.5 1.5 0 0 0 3 0V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8A1.5 1.5 0 0 0 2 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 3.5 8zm17 0A1.5 1.5 0 0 0 19 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 20.5 8zm-4.97-5.84 1.3-1.3a.5.5 0 1 0-.7-.71l-1.48 1.48A5.96 5.96 0 0 0 12 1c-.96 0-1.86.23-2.66.63L7.85.15a.5.5 0 1 0-.7.7l1.31 1.31A5.97 5.97 0 0 0 6 7h12a5.97 5.97 0 0 0-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+          <span><strong>Android版</strong><small>近日公開</small></span>
+        </span>
+        <div class="store-links" data-store-links data-lang="ja"></div>
       </div>
-      <div class="night-aside">
-        <p class="night-description">駅まで歩く時間も考えて、今いる場所から何時に出れば終電に間に合うかをお知らせ。出発前には通知やアラームで知らせます。</p>
-        <div class="night-actions">
-          <div class="night-store-row">
-            <span class="store" aria-disabled="true" data-store-placeholder="appStore">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-              <span><small>iPhone版</small><strong>App Storeで近日公開</strong></span>
-            </span>
-            <span class="store" aria-disabled="true" data-store-placeholder="googlePlay"><span><small>Android</small><strong>準備中です</strong></span></span>
-            <div class="store-links" data-store-links data-lang="ja"></div>
-          </div>
-          <a class="night-how" href="#how">使い方を見る</a>
-        </div>
-        <p class="night-note">iPhoneで基本無料。Premium は14日間無料でお試しできます。</p>
-      </div>
+      <ul class="hero-facts"><li>基本無料</li><li>全国の終電に対応</li><li>登録なし</li><li>広告なし</li></ul>
     </div>
-    <figure class="night-world">
-      <div class="night-scene" data-night-scene data-paused="false">
-        <div class="city-viewport" data-city-viewport></div>
-        <button class="night-motion-toggle" type="button" data-scene-motion aria-pressed="false" aria-label="アニメーションを停止">アニメーションを停止</button>
-      </div>
-      <figcaption class="night-caption"><span>東京、夜の帰り道。</span><span>イラストです · 実際の運行情報ではありません</span></figcaption>
+    <div class="hero-night">
+      <p class="ex-tag">表示例</p>
+      <ol class="tl" aria-label="今夜の通知の例">
+        <li><time>23:42</time><div class="note"><img src="/favicon.png" alt=""><div><b>出るまであと15分</b><span>23:57に出て渋谷駅へ。</span></div><small>通知</small></div></li>
+        <li class="now"><time>23:57</time><div class="note"><img src="/favicon.png" alt=""><div><b>出る時間です</b><span>マナーモードでも鳴ります</span></div><small>⏰</small></div></li>
+        <li><time>00:11</time><div class="note"><img src="/favicon.png" alt=""><div><b>渋谷 00:11発 · 終電</b><span>東急東横線 · 菊名 00:44着</span></div><small>乗車</small></div></li>
+        <li class="later"><time>--:--</time><div class="note"><img src="/favicon.png" alt=""><div><b>もし乗れなかったら</b><span>始発・タクシー・休める場所</span></div><small>プランB</small></div></li>
+      </ol>
+    </div>
+    <figure class="hero-photo">
+      <img class="tall" src="/img/night-alley.webp" width="660" height="1064" alt="提灯が灯る夜の路地">
+      <img class="wide" src="/img/night-alley-wide.webp" width="1200" height="828" alt="" loading="lazy">
+      <figcaption>Photo: Denys Nevozhai / Unsplash</figcaption>
     </figure>
   </div>
 </section>
 
-  <section class="block alt" id="how">
+  <section class="sec" id="how">
     <div class="container">
-      <p class="eyebrow">使い方</p>
-      <h2 class="heading">帰り先を登録したら、あとは出かけるだけ。</h2>
-      <p class="sub">最初に帰り先を登録すれば、あとは飲み会の前にタップするだけ。</p>
-      <div class="steps">
-        <div class="step"><div class="num">1</div><h3>帰り先を登録</h3><p>自宅の最寄り駅（住所も設定可）を選びます。アカウント登録は不要です。</p></div>
-        <div class="step"><div class="num">2</div><h3>案内を開始</h3><p>現在地から最寄り駅と終電を調べ、「ここを出る時刻」を表示します。移動すると自動で更新。</p></div>
-        <div class="step"><div class="num">3</div><h3>時間になったらお知らせ</h3><p>30分前・15分前・出発時など、選んだタイミングで通知やアラームが届きます。</p></div>
-      </div>
+      <div class="sec-head"><p class="sec-kicker">使い方</p><h2 class="sec-title">使い方は、3ステップ。</h2><p class="sec-sub">最初に一度設定すれば、あとは飲み会の前にタップするだけ。</p></div>
+      <ol class="step-cards">
+        <li class="step-card"><div class="mini"><span class="mini-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>自宅（菊名）</span></div><p class="step-n">STEP 1</p><h3>帰り先を登録</h3><p>自宅の最寄り駅か住所を一度だけ。アカウント登録は不要です。</p></li>
+        <li class="step-card"><div class="mini"><div class="mini-time"><small>今夜は</small><b>23:57</b><span>に出る</span><em>渋谷 00:11発 → 自宅 00:44</em></div></div><p class="step-n">STEP 2</p><h3>今夜、案内を開始</h3><p>現在地から最寄り駅と終電を調べて、出る時刻を表示します。</p></li>
+        <li class="step-card"><div class="mini"><div class="note mini-note"><img src="/favicon.png" alt=""><div><b>出る時間です</b><span>渋谷駅へ歩き始めましょう。</span></div></div></div><p class="step-n">STEP 3</p><h3>時間になったらお知らせ</h3><p>15分前と出る時刻に通知。タイミングは自由に変えられます。</p></li>
+      </ol>
     </div>
   </section>
 
-  <section class="block" id="features">
+  <section class="sec alt" id="screens">
     <div class="container">
-      <p class="eyebrow">機能</p>
-      <h2 class="heading">終電に間に合うための機能。</h2>
-      <p class="sub">出発時刻のお知らせから、乗れなかったときのプランBまで。</p>
-      <div class="features">
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-          <h3>ここを出る時刻</h3><p>最寄り駅までの徒歩と終電から、いつ店を出ればいいかを表示。余裕の取り方も選べます。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></div>
-          <h3>通知とアラーム</h3><p>好きなタイミングで通知。iOS 26以降は、マナーモードでも鳴るアラームにもできます。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></div>
-          <h3>夜の案内</h3><p>移動に合わせて出発時刻を自動で更新。終電が出たら自動で止まります。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16.2 7.8l-2.1 6.3-6.3 2.1 2.1-6.3z"/></svg></div>
-          <h3>乗れなかったら</h3><p>始発の時刻、タクシーの目安、近くのネットカフェやホテルなど、朝までの選択肢をすぐ確認。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
-          <h3>ウィジェット・ロック画面<span class="tag-pro">プレミアム</span></h3><p>今夜の出発時刻をホーム画面に。案内中はロック画面とダイナミックアイランドでカウントダウン。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg></div>
-          <h3>飲み会グループ</h3><p>メンバーの出発時刻だけを共有。現在地や自宅は共有されません。グループの作成はプレミアム、参加は無料。</p>
+      <div class="sec-head"><p class="sec-kicker">アプリ画面</p><h2 class="sec-title">終電まで、ずっと見守る。</h2><p class="sec-sub">渋谷から菊名へ帰る夜の例です。</p></div>
+      <div class="show">
+        <figure class="show-phone"><img src="/img/ja-home.webp?v=2" width="600" height="1304" alt="案内中の画面：23:57に出る、渋谷 00:11発" loading="lazy"></figure>
+        <div class="show-text">
+          <p class="sec-kicker">夜の案内</p>
+          <h3>何時に店を出ればいいか、ひと目で。</h3>
+          <p>現在地から最寄り駅までの徒歩と終電を計算。移動すると自動で更新し、終電が出たら止まります。</p>
+          <ul class="checks"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>出るまでのカウントダウン</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>駅までの地図と徒歩時間</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>余裕の取り方を選べる</li></ul>
         </div>
       </div>
-    </div>
-  </section>
-
-  <section class="block alt" id="screens">
-    <div class="container">
-      <p class="eyebrow">アプリ画面</p>
-      <h2 class="heading"><span class="nw">実際の<span class="mark">アプリ画面</span></span></h2>
-      <p class="sub">渋谷から菊名へ帰る夜の例です。</p>
-      <div class="shots">
-        <figure class="shot"><img src="/img/ja-alt.webp?v=2" width="600" height="1304" alt="乗れなかったときの選択肢の画面" loading="lazy"><figcaption><b>乗れなかったら</b>始発・近くで待つ・タクシーを比較</figcaption></figure>
-        <figure class="shot"><img src="/img/ja-group.webp?v=2" width="600" height="1304" alt="グループの画面：今夜参加している4人の出発時刻が早い順に並んでいる" loading="lazy"><figcaption><b>飲み会グループ</b>みんなの出発時刻が一目でわかる</figcaption></figure>
+      <div class="show rev">
+        <figure class="show-phone"><img src="/img/ja-alt.webp?v=2" width="600" height="1304" alt="乗れなかったときの選択肢の画面" loading="lazy"></figure>
+        <div class="show-text">
+          <p class="sec-kicker">乗れなかったら</p>
+          <h3>逃しても、朝までの選択肢がすぐわかる。</h3>
+          <p>始発を待つ、近くで休む、タクシーで帰る。比べて選べます。</p>
+          <ul class="checks"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>始発の時刻</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>近くのネットカフェやホテル</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>タクシー料金の目安</li></ul>
+        </div>
       </div>
-    </div>
-  </section>
-
-  <section class="block" id="battery">
-    <div class="container">
-      <p class="eyebrow">バッテリー</p>
-      <h2 class="heading"><span class="nw">夜通し使っても、</span><span class="nw"><span class="mark">電池にやさしい</span>。</span></h2>
-      <p class="sub">終電まで見守っても、電池の減りはできるだけ少なく。</p>
-      <div class="features">
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
-          <h3>動いたときだけ更新</h3><p>位置は約200m動くごと（アプリを開いている間は約150m）に更新。同じ店にいる間は、ほとんど電池を使いません。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></div>
-          <h3>必要なぶんの精度だけ</h3><p>駅選びに足りる標準的な精度で調べ、電池を多く使う高精度のGPSは使いません。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M5 3h14M5 21h14"/><path d="M7 3c0 5 10 5 10 9s-10 4-10 9"/><path d="M17 3c0 5-10 5-10 9"/></svg></div>
-          <h3>出発の1時間前までは控えめに</h3><p>大まかな位置で約500mごとに更新。出発前の最後の1時間は、いつもの精度に戻ります。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="3"/></svg></div>
-          <h3>更新のしかたを選べる</h3><p>「アプリの使用中のみ」なら開いている間だけ。「アプリを閉じても更新」なら、アプリを閉じても出発時刻が追いかけます。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></div>
-          <h3>自動で止まる</h3><p>終電が出たあと、〔乗った〕を押したとき、遅くとも午前4時に位置情報の利用を止めます。</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M11 9l-2.5 3h4L10 15"/></svg></div>
-          <h3>省電力モードでも</h3><p>通知とアラームは前もって端末に予約するので、省電力モードでも止まりません。</p>
+      <div class="show">
+        <figure class="show-phone"><img src="/img/ja-group.webp?v=2" width="600" height="1304" alt="グループの画面：4人の出る時刻が早い順に並んでいる" loading="lazy"></figure>
+        <div class="show-text">
+          <p class="sec-kicker">飲み会グループ</p>
+          <h3>みんなの出る時刻を、ひとつの画面に。</h3>
+          <p>共有するのは出る時刻だけ。現在地や自宅は共有されません。</p>
+          <ul class="checks"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>早く出る人から順に表示</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>招待リンクで参加</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>作成はプレミアム、参加は無料</li></ul>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="block alt" id="coverage">
+  <section class="sec" id="features">
     <div class="container">
-      <p class="eyebrow">対応路線</p>
-      <h2 class="heading">首都圏の<span class="mark">終電</span>に対応</h2>
-      <p class="sub">地下鉄などは公共交通オープンデータで、JR・私鉄はApple Mapsで調べます。</p>
-      <ul class="chips">
-        <li>東京メトロ</li><li>都営地下鉄</li><li>つくばエクスプレス</li><li>りんかい線</li><li>多摩モノレール</li><li>横浜市営地下鉄</li><li class="apple">JR・私鉄（Apple Maps）</li>
-      </ul>
-      <p class="fineprint">時刻は目安です。駅の案内も併せてご確認ください。</p>
+      <div class="sec-head"><p class="sec-kicker">そのほかの機能</p><h2 class="sec-title">安心して、夜を楽しめるように。</h2></div>
+      <div class="tiles">
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></span><h3>マナーモードでも鳴る</h3><p>iOS 26以降は、通知をマナーモードでも鳴るアラームにできます。</p></div>
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><h3>ウィジェット・ロック画面<span class="tag-pro">プレミアム</span></h3><p>今夜の出る時刻をホーム画面に。案内中はロック画面とダイナミックアイランドでカウントダウン。</p></div>
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span><h3>電池にやさしい</h3><p>位置は動いたときだけ更新。電池を多く使う高精度のGPSは使いません。</p></div>
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></span><h3>自動で止まる</h3><p>終電が出たあと、遅くとも午前4時に位置情報の利用を止めます。</p></div>
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><h3>登録なし・履歴なし</h3><p>アカウント不要。帰り先や設定はiPhoneの中だけに保存し、移動履歴は残しません。</p></div>
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M11 9l-2.5 3h4L10 15"/></svg></span><h3>省電力モードでも</h3><p>通知とアラームは前もって端末に予約するので、省電力モードでも止まりません。</p></div>
+      </div>
+      <div class="coverage" id="coverage">
+        <div><h3>全国の終電に対応</h3><p>東京メトロ・都営などは公共交通オープンデータの時刻表で、JR・私鉄・各地の地下鉄はApple Mapsで調べます。時刻は目安です。</p></div>
+        <ul class="chips"><li>東京メトロ</li><li>都営地下鉄</li><li>つくばエクスプレス</li><li>りんかい線</li><li>多摩モノレール</li><li>横浜市営地下鉄</li><li class="apple">JR・私鉄・全国の地下鉄（Apple Maps）</li></ul>
+      </div>
     </div>
   </section>
 
-  <section class="block" id="premium">
+  <section class="sec alt" id="premium">
     <div class="container">
-      <p class="eyebrow">料金</p>
-      <h2 class="heading"><span class="nw">基本は<span class="mark">無料</span>。</span><span class="nw">もっと便利にプレミアム。</span></h2>
-      <p class="sub">プレミアムは14日間無料。いつでもiPhoneの設定から解約できます。</p>
+      <div class="sec-head"><p class="sec-kicker">料金</p><h2 class="sec-title">基本は無料。もっと便利にプレミアム。</h2><p class="sec-sub">プレミアムは14日間無料。いつでもiPhoneの設定から解約できます。</p></div>
       <div class="plans">
         <div class="plan">
           <h3>無料</h3>
           <p class="price">0<small>円</small></p>
           <p class="per">ずっと無料</p>
-          <ul><li>出発時刻と夜の案内</li><li>通知・アラーム（マナーモードでも鳴る）</li><li>乗れなかったときの選択肢</li><li>グループへの参加</li><li>帰り先 1件</li></ul>
+          <ul><li>出る時刻と夜の案内</li><li>通知・アラーム（マナーモードでも鳴る）</li><li>乗れなかったときの選択肢</li><li>グループへの参加</li><li>帰り先 1件</li></ul>
         </div>
         <div class="plan pro">
           <h3>プレミアム</h3>
@@ -204,34 +163,39 @@
     </div>
   </section>
 
-  <section class="block alt" id="faq">
+  <section class="sec" id="faq">
     <div class="container">
-      <p class="eyebrow">よくある質問</p>
-      <h2 class="heading">よくある質問</h2>
+      <div class="sec-head"><p class="sec-kicker">よくある質問</p><h2 class="sec-title">よくある質問</h2></div>
       <div class="faq">
+        <details><summary>東京以外でも使えますか？</summary><p>使えます。JR・私鉄・各地の地下鉄はApple Mapsの情報で、全国の終電を調べます。東京メトロ・都営などは公式の時刻表データを使います。</p></details>
+        <details><summary>無料でどこまで使えますか？</summary><p>出る時刻の案内、通知・アラーム、乗れなかったときの選択肢は無料です。ウィジェット・ロック画面のカウントダウン・グループの作成などがプレミアムです。</p></details>
         <details><summary>アカウント登録は必要ですか？</summary><p>不要です。帰り先や設定はiPhoneの中に保存され、移動履歴は残りません。</p></details>
         <details><summary>位置情報はどう使われますか？</summary><p>最寄り駅と徒歩時間を調べるためだけに使います。アプリを閉じている間も使うのは、「夜間の位置情報」で「アプリを閉じても更新」を選んだときだけです。</p></details>
-        <details><summary>Androidには対応していますか？</summary><p>iPhoneとAndroidの両方に対応する予定です。公開後、ページにダウンロード先を表示します。</p></details>
+        <details><summary>Androidには対応していますか？</summary><p>Android版を準備中です。公開したら、このページにダウンロード先を表示します。</p></details>
       </div>
-      <p class="center" style="margin-top:1.5rem"><a href="/support/">そのほかの質問・お問い合わせ</a></p>
+      <p class="faq-more"><a href="/support/">そのほかの質問・お問い合わせ →</a></p>
     </div>
   </section>
 
-  <section class="block">
+  <section class="sec closing-sec" id="download">
     <div class="container">
-      <div class="cta">
-        <p class="eyebrow">ダウンロード</p>
-        <h2 class="heading"><span class="nw">帰り時を、</span><span class="nw"><span class="mark mark-dark">あなたのスマホに。</span></span></h2>
-        <p class="sub">iPhone版を配信中です。準備中です。</p>
-        <div class="actions">
-          <span class="store" aria-disabled="true" data-store-placeholder="appStore">
+      <div class="closing-card">
+        <div class="closing-text">
+          <h2 class="sec-title">今夜は、時計を見ずに。</h2>
+          <p class="sec-sub">出る時間になったら、帰り時が知らせます。</p>
+          <div class="hero-stores">
+          <span class="store ios-soon" aria-disabled="true" data-store-placeholder="appStore">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-            <span><small>iPhone版</small><strong>App Storeで近日公開</strong></span>
+            <span><small>iPhone版</small><strong>App Store</strong></span>
           </span>
-          <span class="store" aria-disabled="true" data-store-placeholder="googlePlay"><span><small>Android版</small><strong>Google Playで近日公開</strong></span></span>
+          <span class="store soon" aria-disabled="true" data-store-placeholder="googlePlay">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18c0 .55.45 1 1 1h1v3.5a1.5 1.5 0 0 0 3 0V19h2v3.5a1.5 1.5 0 0 0 3 0V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8A1.5 1.5 0 0 0 2 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 3.5 8zm17 0A1.5 1.5 0 0 0 19 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 20.5 8zm-4.97-5.84 1.3-1.3a.5.5 0 1 0-.7-.71l-1.48 1.48A5.96 5.96 0 0 0 12 1c-.96 0-1.86.23-2.66.63L7.85.15a.5.5 0 1 0-.7.7l1.31 1.31A5.97 5.97 0 0 0 6 7h12a5.97 5.97 0 0 0-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+            <span><strong>Android版</strong><small>近日公開</small></span>
+          </span>
           <div class="store-links" data-store-links data-lang="ja"></div>
-          <a class="btn btn-amber" href="/support/#contact-form">お問い合わせ</a>
         </div>
+        </div>
+        <img src="/img/night-alley-wide.webp" width="1200" height="828" alt="" loading="lazy">
       </div>
     </div>
   </section>
@@ -249,13 +213,12 @@
       </nav>
     </div>
     <div class="f-bottom">
-      <div class="f-legal"><p>© 2026 LastRide（帰り時）· 開発：Nicholas Roberts、YoungJun Ryu</p><p class="f-data">公共交通データ：公共交通オープンデータセンター（都営地下鉄のデータは東京都交通局、CC BY 4.0）。表示内容について鉄道事業者へのお問い合わせはご遠慮ください。地図・JR・私鉄の時刻：Apple Maps。</p></div>
+      <div class="f-legal"><p>© 2026 LastRide（帰り時）· 開発：Nicholas Roberts、YoungJun Ryu</p><p class="f-data">公共交通データ：公共交通オープンデータセンター（都営地下鉄のデータは東京都交通局、CC BY 4.0）。表示内容について鉄道事業者へのお問い合わせはご遠慮ください。地図・JR・私鉄の時刻：Apple Maps。Androidロボットは、Googleが作成・提供している作品をもとに、クリエイティブ・コモンズ表示 3.0 ライセンスの条件に従って使用しています。</p></div>
       <div class="social"><a href="https://www.instagram.com/lastrideapp/" target="_blank" rel="noopener" aria-label="Instagram @lastrideapp" title="Instagram @lastrideapp"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.3" cy="6.7" r="1.3" fill="currentColor"/></svg></a><a href="https://www.threads.com/@lastrideapp" target="_blank" rel="noopener" aria-label="Threads @lastrideapp" title="Threads @lastrideapp"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M16.6 11.2c-.1-2.4-1.5-3.8-3.8-3.8-1.4 0-2.6.6-3.3 1.7l1.3.9c.5-.8 1.2-1 2-1 1.1 0 1.8.6 2 1.7-.6-.1-1.2-.2-1.9-.1-2 .1-3.2 1.3-3.1 2.8.1 1.6 1.5 2.6 3.2 2.5 2.2-.1 3.4-1.7 3.6-4.1.9.5 1.4 1.3 1.5 2.4.1 2.2-1.9 4-5.6 4-4.3 0-6.5-2.7-6.5-6.9S8.2 4.4 12.4 4.4c3.2 0 5.3 1.5 6 4.2l1.6-.4C19.1 4.9 16.4 2.8 12.4 2.8 7.2 2.8 4.4 6.3 4.4 11.4s2.8 8.5 8.1 8.5c4.6 0 7.4-2.4 7.2-5.8-.1-1.5-1-2.8-3.1-3.9Zm-3.9 3.4c-1 .1-1.6-.4-1.7-1-.1-.7.5-1.3 1.7-1.4.6 0 1.2 0 1.8.2-.2 1.5-.9 2.1-1.8 2.2Z" fill="currentColor"/></svg></a><a href="https://www.linkedin.com/company/lastrideapp/" target="_blank" rel="noopener" aria-label="LinkedIn LastRide" title="LinkedIn LastRide"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="7" y="10" width="2.4" height="7" fill="currentColor"/><circle cx="8.2" cy="7.3" r="1.4" fill="currentColor"/><path d="M11.5 10h2.3v1c.4-.7 1.2-1.2 2.3-1.2 1.8 0 2.4 1.2 2.4 3V17h-2.4v-3.7c0-.9-.3-1.5-1.1-1.5-.9 0-1.2.7-1.2 1.6V17h-2.3z" fill="currentColor"/></svg></a></div>
     </div>
   </div>
 </footer>
 <script src="/store-listings.js?v=3"></script>
 <script src="/store-downloads.js?v=4"></script>
-<script src="/night-scene.js?v=2" defer></script>
 </body>
 </html>

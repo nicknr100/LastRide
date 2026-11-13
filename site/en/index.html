@@ -8,17 +8,18 @@
 <meta property="og:title" content="LastRide | Last Train Alert for Japan">
 <meta property="og:description" content="Know exactly when to leave to catch the last train home.">
 <meta property="og:image" content="https://lastride.jp/app-icon.png">
+<meta name="theme-color" content="#121212">
 <meta property="og:type" content="website">
 <link rel="alternate" hreflang="ja" href="https://lastride.jp/">
 <link rel="alternate" hreflang="en" href="https://lastride.jp/en/">
 <link rel="alternate" hreflang="x-default" href="https://lastride.jp/">
-<link rel="stylesheet" href="/style.css?v=14">
-<link rel="stylesheet" href="/night-home.css?v=3">
+<link rel="stylesheet" href="/style.css?v=15">
+<link rel="stylesheet" href="/home.css?v=2">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/favicon.png" sizes="64x64" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
-<body class="night-landing">
+<body class="home">
 <header class="site">
   <div class="container">
     <a class="brand" href="/en/"><img src="/favicon.png" alt="" width="32" height="32"><b>LASTRIDE</b><span>帰り時</span></a>
@@ -33,149 +34,107 @@
   </div>
 </header>
 <main>
-<section class="night-hero" aria-labelledby="night-title">
-  <div class="night-shell">
-    <div class="night-intro">
-      <div class="night-copy">
-        <p class="night-kicker">A last-train reminder for Japan</p>
-        <h1 id="night-title" class="night-title">The last train <span>isn’t your leave time.</span></h1>
+<section class="home-hero" aria-labelledby="hero-title">
+  <div class="wrap">
+    <div class="hero-copy">
+      <p class="hero-kicker">LAST-TRAIN ALERTS FOR JAPAN</p>
+      <h1 id="hero-title" class="hero-title"><span class="line">Stay out.</span><span class="line"><em>Still make</em></span><span class="line">the last train.</span></h1>
+      <p class="hero-lead">LastRide works out when you need to leave — walk and transfers included — reminds you ahead of time, and rings even in silent mode when it’s time to go.</p>
+      <div class="hero-stores">
+        <span class="store ios-soon" aria-disabled="true" data-store-placeholder="appStore">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+          <span><small>For iPhone</small><strong>App Store</strong></span>
+        </span>
+        <span class="store soon" aria-disabled="true" data-store-placeholder="googlePlay">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18c0 .55.45 1 1 1h1v3.5a1.5 1.5 0 0 0 3 0V19h2v3.5a1.5 1.5 0 0 0 3 0V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8A1.5 1.5 0 0 0 2 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 3.5 8zm17 0A1.5 1.5 0 0 0 19 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 20.5 8zm-4.97-5.84 1.3-1.3a.5.5 0 1 0-.7-.71l-1.48 1.48A5.96 5.96 0 0 0 12 1c-.96 0-1.86.23-2.66.63L7.85.15a.5.5 0 1 0-.7.7l1.31 1.31A5.97 5.97 0 0 0 6 7h12a5.97 5.97 0 0 0-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+          <span><strong>Android</strong><small>Coming soon</small></span>
+        </span>
+        <div class="store-links" data-store-links data-lang="en"></div>
       </div>
-      <div class="night-aside">
-        <p class="night-description">There’s still the walk to the station. LastRide works back from the final train to tell you when to head out, then reminds you before it’s time to go.</p>
-        <div class="night-actions">
-          <div class="night-store-row">
-            <span class="store" aria-disabled="true" data-store-placeholder="appStore">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-              <span><small>For iPhone</small><strong>Coming soon to the App Store</strong></span>
-            </span>
-            <span class="store" aria-disabled="true" data-store-placeholder="googlePlay"><span><small>Android</small><strong>Coming soon</strong></span></span>
-            <div class="store-links" data-store-links data-lang="en"></div>
-          </div>
-          <a class="night-how" href="#how">How it works</a>
-        </div>
-        <p class="night-note">Free to use on iPhone. Premium starts with a 14-day trial.</p>
-      </div>
+      <ul class="hero-facts"><li>Free to use</li><li>Works across Japan</li><li>No account</li><li>No ads</li></ul>
     </div>
-    <figure class="night-world">
-      <div class="night-scene" data-night-scene data-paused="false">
-        <div class="city-viewport" data-city-viewport></div>
-        <button class="night-motion-toggle" type="button" data-scene-motion aria-pressed="false" aria-label="Pause animation">Pause animation</button>
-      </div>
-      <figcaption class="night-caption"><span>Tokyo, after dark.</span><span>Illustrated scene · not live train information</span></figcaption>
+    <div class="hero-night">
+      <p class="ex-tag">EXAMPLE</p>
+      <ol class="tl" aria-label="Example of tonight’s notifications">
+        <li><time>23:42</time><div class="note"><img src="/favicon.png" alt=""><div><b>15 min to go</b><span>Leave for Shibuya by 23:57.</span></div><small>Notice</small></div></li>
+        <li class="now"><time>23:57</time><div class="note"><img src="/favicon.png" alt=""><div><b>Leave now</b><span>Rings even in silent mode</span></div><small>⏰</small></div></li>
+        <li><time>00:11</time><div class="note"><img src="/favicon.png" alt=""><div><b>Shibuya 00:11 · last train</b><span>Tokyu Toyoko Line · Kikuna 00:44</span></div><small>Board</small></div></li>
+        <li class="later"><time>--:--</time><div class="note"><img src="/favicon.png" alt=""><div><b>If you miss it</b><span>First trains, taxis, places to wait</span></div><small>Plan B</small></div></li>
+      </ol>
+    </div>
+    <figure class="hero-photo">
+      <img class="tall" src="/img/night-alley.webp" width="660" height="1064" alt="A lantern-lit alley at night in Japan">
+      <img class="wide" src="/img/night-alley-wide.webp" width="1200" height="828" alt="" loading="lazy">
+      <figcaption>Photo: Denys Nevozhai / Unsplash</figcaption>
     </figure>
   </div>
 </section>
 
-  <section class="block alt" id="how">
+  <section class="sec" id="how">
     <div class="container">
-      <p class="eyebrow">How it works</p>
-      <h2 class="heading">Set a destination. We’ll handle the timing.</h2>
-      <p class="sub">Set your way home once, then tap before the night out.</p>
-      <div class="steps">
-        <div class="step"><div class="num">1</div><h3>Set your way home</h3><p>Pick your home station (or an address). No account needed.</p></div>
-        <div class="step"><div class="num">2</div><h3>Start tonight</h3><p>LastRide finds your nearest station and last train and shows when to leave — updating as you move.</p></div>
-        <div class="step"><div class="num">3</div><h3>Get the reminder</h3><p>A notification or alarm at the times you choose: 30 or 15 minutes before, or at leave time.</p></div>
-      </div>
+      <div class="sec-head"><p class="sec-kicker">How it works</p><h2 class="sec-title">Three steps. That’s it.</h2><p class="sec-sub">Set it up once, then tap before the night out.</p></div>
+      <ol class="step-cards">
+        <li class="step-card"><div class="mini"><span class="mini-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home (Kikuna)</span></div><p class="step-n">STEP 1</p><h3>Set your way home</h3><p>Pick your home station or an address, once. No account needed.</p></li>
+        <li class="step-card"><div class="mini"><div class="mini-time"><small>Tonight, leave at</small><b>23:57</b><em>Shibuya 00:11 → Home 00:44</em></div></div><p class="step-n">STEP 2</p><h3>Start tonight</h3><p>LastRide finds your nearest station and last train, and shows when to leave.</p></li>
+        <li class="step-card"><div class="mini"><div class="note mini-note"><img src="/favicon.png" alt=""><div><b>Leave now</b><span>Start walking to Shibuya for the last train.</span></div></div></div><p class="step-n">STEP 3</p><h3>Get the reminder</h3><p>A notice 15 minutes before and at leave time. Change the timing any time.</p></li>
+      </ol>
     </div>
   </section>
 
-  <section class="block" id="features">
+  <section class="sec alt" id="screens">
     <div class="container">
-      <p class="eyebrow">Features</p>
-      <h2 class="heading">More than a reminder.</h2>
-      <p class="sub">From the reminder to leave to a plan B if you miss it.</p>
-      <div class="features">
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-          <h3>When to leave</h3><p>Works out when to leave from the walk to the nearest station and the last train. Choose how much time to spare.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></div>
-          <h3>Reminders &amp; alarms</h3><p>Notifications at the times you choose. On iOS 26 and later, alarms that ring even in silent mode.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></div>
-          <h3>Night tracking</h3><p>Updates your leave time as you move, and stops by itself once the last train has gone.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16.2 7.8l-2.1 6.3-6.3 2.1 2.1-6.3z"/></svg></div>
-          <h3>If you miss it</h3><p>First trains, taxi estimates, and nearby internet cafés and hotels to wait until morning.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
-          <h3>Widgets &amp; lock screen<span class="tag-pro">Premium</span></h3><p>Tonight’s leave time on your home screen, and a countdown on the lock screen and Dynamic Island while tracking.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></svg></div>
-          <h3>Groups for nights out</h3><p>Share only your leave time with friends — never your location or home. Creating a group is Premium; joining is free.</p>
+      <div class="sec-head"><p class="sec-kicker">Screens</p><h2 class="sec-title">Watching the clock, so you don’t have to.</h2><p class="sec-sub">A night out in Shibuya, heading home to Kikuna.</p></div>
+      <div class="show">
+        <figure class="show-phone"><img src="/img/en-home.webp?v=2" width="600" height="1304" alt="Tracking screen: leave at 23:57 for the 00:11 from Shibuya" loading="lazy"></figure>
+        <div class="show-text">
+          <p class="sec-kicker">Night tracking</p>
+          <h3>See when to leave, at a glance.</h3>
+          <p>Works out the walk to your nearest station and the last train. Updates as you move, and stops once the last train has gone.</p>
+          <ul class="checks"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>A countdown to leave time</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Map and walk to the station</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Choose how much time to spare</li></ul>
         </div>
       </div>
-    </div>
-  </section>
-
-  <section class="block alt" id="screens">
-    <div class="container">
-      <p class="eyebrow">Screens</p>
-      <h2 class="heading">What you actually see.</h2>
-      <p class="sub">A night out in Shibuya, heading home to Kikuna.</p>
-      <div class="shots">
-        <figure class="shot"><img src="/img/en-alt.webp?v=2" width="600" height="1304" alt="The if-you-miss-it screen" loading="lazy"><figcaption><b>If you miss it</b>Compare the first train, waiting nearby and a taxi</figcaption></figure>
-        <figure class="shot"><img src="/img/en-group.webp?v=2" width="600" height="1304" alt="A group: the four people out tonight, listed by when they leave" loading="lazy"><figcaption><b>Groups</b>See everyone’s leave time at a glance</figcaption></figure>
+      <div class="show rev">
+        <figure class="show-phone"><img src="/img/en-alt.webp?v=2" width="600" height="1304" alt="The if-you-miss-it screen" loading="lazy"></figure>
+        <div class="show-text">
+          <p class="sec-kicker">If you miss it</p>
+          <h3>Missed it? See your options until morning.</h3>
+          <p>Wait for the first train, rest nearby or take a taxi — compared side by side.</p>
+          <ul class="checks"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>First train times</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Nearby internet cafés and hotels</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Taxi fare estimates</li></ul>
+        </div>
       </div>
-    </div>
-  </section>
-
-  <section class="block" id="battery">
-    <div class="container">
-      <p class="eyebrow">Battery</p>
-      <h2 class="heading">Location tracking, without the constant drain.</h2>
-      <p class="sub">Watching the clock until the last train, using as little battery as it can.</p>
-      <div class="features">
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
-          <h3>Updates only when you move</h3><p>Your position updates about every 200 m you move (about 150 m with the app open). While you stay in one place, it uses almost no battery.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></div>
-          <h3>Only the accuracy it needs</h3><p>Standard accuracy, enough to pick a station. No battery-hungry high-precision GPS.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><path d="M5 3h14M5 21h14"/><path d="M7 3c0 5 10 5 10 9s-10 4-10 9"/><path d="M17 3c0 5-10 5-10 9"/></svg></div>
-          <h3>Lighter until the last hour</h3><p>A rough position about every 500 m. In the last hour before you leave, it goes back to the usual accuracy.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="3"/></svg></div>
-          <h3>You choose how it updates</h3><p>“App open” updates only while LastRide is open. “When closed” keeps your leave time following you with the app closed.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></div>
-          <h3>Stops by itself</h3><p>Location stops after the last train has gone, when you tap “I’m on it”, or at 4:00 am at the latest.</p>
-        </div>
-        <div class="feature">
-          <div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M11 9l-2.5 3h4L10 15"/></svg></div>
-          <h3>Even in Low Power Mode</h3><p>Reminders and alarms are scheduled on your phone ahead of time, so Low Power Mode doesn’t stop them.</p>
+      <div class="show">
+        <figure class="show-phone"><img src="/img/en-group.webp?v=2" width="600" height="1304" alt="A group: four people listed by when they leave" loading="lazy"></figure>
+        <div class="show-text">
+          <p class="sec-kicker">Groups</p>
+          <h3>Everyone’s leave time, on one screen.</h3>
+          <p>Only your leave time is shared — never your location or home.</p>
+          <ul class="checks"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Earliest to leave listed first</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Join with an invite link</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Creating is Premium; joining is free</li></ul>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="block alt" id="coverage">
+  <section class="sec" id="features">
     <div class="container">
-      <p class="eyebrow">Coverage</p>
-      <h2 class="heading"><span class="nw">Last trains</span> <span class="nw">across <span class="mark">Greater Tokyo</span></span></h2>
-      <p class="sub">Subways and more from public transport open data; JR and private railways via Apple Maps.</p>
-      <ul class="chips">
-        <li>Tokyo Metro</li><li>Toei Subway</li><li>Tsukuba Express</li><li>Rinkai Line</li><li>Tama Monorail</li><li>Yokohama Subway</li><li class="apple">JR &amp; private railways (Apple Maps)</li>
-      </ul>
-      <p class="fineprint">Times are estimates. Please check station information as well.</p>
+      <div class="sec-head"><p class="sec-kicker">More features</p><h2 class="sec-title">So you can enjoy the night.</h2></div>
+      <div class="tiles">
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></span><h3>Rings in silent mode</h3><p>On iOS 26 and later, reminders can be alarms that ring even in silent mode.</p></div>
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><h3>Widgets & lock screen<span class="tag-pro">Premium</span></h3><p>Tonight’s leave time on your home screen, and a countdown on the lock screen and Dynamic Island.</p></div>
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span><h3>Easy on the battery</h3><p>Location updates only when you move. No battery-hungry high-precision GPS.</p></div>
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></span><h3>Stops by itself</h3><p>Location stops after the last train has gone, or at 4:00 am at the latest.</p></div>
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><h3>No account, no history</h3><p>Your destinations and settings stay on your iPhone. No movement history is kept.</p></div>
+        <div class="tile"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M11 9l-2.5 3h4L10 15"/></svg></span><h3>Works in Low Power Mode</h3><p>Reminders and alarms are scheduled ahead of time, so Low Power Mode doesn’t stop them.</p></div>
+      </div>
+      <div class="coverage" id="coverage">
+        <div><h3>Last trains across Japan</h3><p>Tokyo Metro, Toei and more from open timetable data; JR, private railways and subways in other cities via Apple Maps. Times are estimates.</p></div>
+        <ul class="chips"><li>Tokyo Metro</li><li>Toei Subway</li><li>Tsukuba Express</li><li>Rinkai Line</li><li>Tama Monorail</li><li>Yokohama Subway</li><li class="apple">JR, private railways &amp; more (Apple Maps)</li></ul>
+      </div>
     </div>
   </section>
 
-  <section class="block" id="premium">
+  <section class="sec alt" id="premium">
     <div class="container">
-      <p class="eyebrow">Pricing</p>
-      <h2 class="heading"><span class="nw"><span class="mark">Free</span> to use.</span> <span class="nw">Premium for more.</span></h2>
-      <p class="sub">Premium is free for 14 days. Cancel any time in iPhone Settings.</p>
+      <div class="sec-head"><p class="sec-kicker">Pricing</p><h2 class="sec-title">Free to use. Premium for more.</h2><p class="sec-sub">Premium is free for 14 days. Cancel any time in iPhone Settings.</p></div>
       <div class="plans">
         <div class="plan">
           <h3>Free</h3>
@@ -204,35 +163,40 @@
     </div>
   </section>
 
-  <section class="block alt" id="faq">
+  <section class="sec" id="faq">
     <div class="container">
-      <p class="eyebrow">FAQ</p>
-      <h2 class="heading">Common questions</h2>
+      <div class="sec-head"><p class="sec-kicker">FAQ</p><h2 class="sec-title">Common questions</h2></div>
       <div class="faq">
+        <details><summary>Does it work outside Tokyo?</summary><p>Yes. JR, private railways and subways across Japan come from Apple Maps; Tokyo Metro, Toei and a few others use official timetable data.</p></details>
+        <details><summary>What’s free?</summary><p>Your leave time, reminders and alarms, and the plan B if you miss it are all free. Widgets, the lock-screen countdown and creating groups are Premium.</p></details>
         <details><summary>Do I need an account?</summary><p>No. Your destinations and settings stay on your iPhone, and no movement history is kept.</p></details>
         <details><summary>How is my location used?</summary><p>Only to find the nearest station and walking time. It’s used while the app is closed only if you choose “When closed” for night tracking.</p></details>
         <details><summary>Is the app in English?</summary><p>Yes. LastRide works in English and Japanese — switch any time in Settings.</p></details>
-        <details><summary>Is there an Android version?</summary><p>We are preparing both iOS and Android releases. Download links will appear when each store listing is public.</p></details>
+        <details><summary>Is there an Android version?</summary><p>It’s on the way. A download link will appear on this page when it’s out.</p></details>
       </div>
-      <p class="center" style="margin-top:1.5rem"><a href="/en/support/">More questions and contact</a></p>
+      <p class="faq-more"><a href="/en/support/">More questions and contact →</a></p>
     </div>
   </section>
 
-  <section class="block">
+  <section class="sec closing-sec" id="download">
     <div class="container">
-      <div class="cta">
-        <p class="eyebrow">Download</p>
-        <h2 class="heading">Get LastRide on your iPhone.</h2>
-        <p class="sub">Out now on iPhone. Android is on the way.</p>
-        <div class="actions">
-          <span class="store" aria-disabled="true" data-store-placeholder="appStore">
+      <div class="closing-card">
+        <div class="closing-text">
+          <h2 class="sec-title">Tonight, forget the clock.</h2>
+          <p class="sec-sub">LastRide tells you when it’s time to go.</p>
+          <div class="hero-stores">
+          <span class="store ios-soon" aria-disabled="true" data-store-placeholder="appStore">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-            <span><small>For iPhone</small><strong>Coming soon to the App Store</strong></span>
+            <span><small>For iPhone</small><strong>App Store</strong></span>
           </span>
-          <span class="store" aria-disabled="true" data-store-placeholder="googlePlay"><span><small>For Android</small><strong>Coming soon to Google Play</strong></span></span>
+          <span class="store soon" aria-disabled="true" data-store-placeholder="googlePlay">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18c0 .55.45 1 1 1h1v3.5a1.5 1.5 0 0 0 3 0V19h2v3.5a1.5 1.5 0 0 0 3 0V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8A1.5 1.5 0 0 0 2 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 3.5 8zm17 0A1.5 1.5 0 0 0 19 9.5v7a1.5 1.5 0 0 0 3 0v-7A1.5 1.5 0 0 0 20.5 8zm-4.97-5.84 1.3-1.3a.5.5 0 1 0-.7-.71l-1.48 1.48A5.96 5.96 0 0 0 12 1c-.96 0-1.86.23-2.66.63L7.85.15a.5.5 0 1 0-.7.7l1.31 1.31A5.97 5.97 0 0 0 6 7h12a5.97 5.97 0 0 0-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+            <span><strong>Android</strong><small>Coming soon</small></span>
+          </span>
           <div class="store-links" data-store-links data-lang="en"></div>
-          <a class="btn btn-amber" href="/en/support/#contact-form">Contact us</a>
         </div>
+        </div>
+        <img src="/img/night-alley-wide.webp" width="1200" height="828" alt="" loading="lazy">
       </div>
     </div>
   </section>
@@ -250,13 +214,12 @@
       </nav>
     </div>
     <div class="f-bottom">
-      <div class="f-legal"><p>© 2026 LastRide · Made by Nicholas Roberts and YoungJun Ryu</p><p class="f-data">Public transport data: Public Transportation Open Data Center (Toei Subway data: Bureau of Transportation, Tokyo Metropolitan Government, CC BY 4.0). Please do not contact rail operators about what the app shows. Maps and JR/private-railway times: Apple Maps.</p></div>
+      <div class="f-legal"><p>© 2026 LastRide · Made by Nicholas Roberts and YoungJun Ryu</p><p class="f-data">Public transport data: Public Transportation Open Data Center (Toei Subway data: Bureau of Transportation, Tokyo Metropolitan Government, CC BY 4.0). Please do not contact rail operators about what the app shows. Maps and JR/private-railway times: Apple Maps. The Android robot is reproduced or modified from work created and shared by Google and used according to terms described in the Creative Commons 3.0 Attribution License.</p></div>
       <div class="social"><a href="https://www.instagram.com/lastrideapp/" target="_blank" rel="noopener" aria-label="Instagram @lastrideapp" title="Instagram @lastrideapp"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.3" cy="6.7" r="1.3" fill="currentColor"/></svg></a><a href="https://www.threads.com/@lastrideapp" target="_blank" rel="noopener" aria-label="Threads @lastrideapp" title="Threads @lastrideapp"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M16.6 11.2c-.1-2.4-1.5-3.8-3.8-3.8-1.4 0-2.6.6-3.3 1.7l1.3.9c.5-.8 1.2-1 2-1 1.1 0 1.8.6 2 1.7-.6-.1-1.2-.2-1.9-.1-2 .1-3.2 1.3-3.1 2.8.1 1.6 1.5 2.6 3.2 2.5 2.2-.1 3.4-1.7 3.6-4.1.9.5 1.4 1.3 1.5 2.4.1 2.2-1.9 4-5.6 4-4.3 0-6.5-2.7-6.5-6.9S8.2 4.4 12.4 4.4c3.2 0 5.3 1.5 6 4.2l1.6-.4C19.1 4.9 16.4 2.8 12.4 2.8 7.2 2.8 4.4 6.3 4.4 11.4s2.8 8.5 8.1 8.5c4.6 0 7.4-2.4 7.2-5.8-.1-1.5-1-2.8-3.1-3.9Zm-3.9 3.4c-1 .1-1.6-.4-1.7-1-.1-.7.5-1.3 1.7-1.4.6 0 1.2 0 1.8.2-.2 1.5-.9 2.1-1.8 2.2Z" fill="currentColor"/></svg></a><a href="https://www.linkedin.com/company/lastrideapp/" target="_blank" rel="noopener" aria-label="LinkedIn LastRide" title="LinkedIn LastRide"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="7" y="10" width="2.4" height="7" fill="currentColor"/><circle cx="8.2" cy="7.3" r="1.4" fill="currentColor"/><path d="M11.5 10h2.3v1c.4-.7 1.2-1.2 2.3-1.2 1.8 0 2.4 1.2 2.4 3V17h-2.4v-3.7c0-.9-.3-1.5-1.1-1.5-.9 0-1.2.7-1.2 1.6V17h-2.3z" fill="currentColor"/></svg></a></div>
     </div>
   </div>
 </footer>
 <script src="/store-listings.js?v=3"></script>
 <script src="/store-downloads.js?v=4"></script>
-<script src="/night-scene.js?v=2" defer></script>
 </body>
 </html>
