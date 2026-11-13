@@ -538,3 +538,72 @@ html[lang="en"] .page-head h1 { letter-spacing: -0.02em; line-height: 1.15; }
 footer.site .brand.brand-ja span { color: var(--text); }
 /* Thin ring so the navy app icon reads as a badge on the black header and footer */
 .brand img { box-shadow: 0 0 0 1px #3a3a3a; }
+
+/* ---------------------------------------------------------------------------
+ * Phones: one-row header with a menu button, tighter sections and cards
+ * ------------------------------------------------------------------------- */
+.nav-btn { display: none; }
+nav.main i { display: none; }
+nav.main .menu-extra { display: none; }
+@media (max-width: 760px) {
+  header.site .container { flex-wrap: wrap; min-height: 56px; gap: 0 0.6rem; padding-top: 0.35rem; padding-bottom: 0.35rem; }
+  header.site .brand { flex: 1; order: 1; }
+  header.site .lang-toggle { order: 2; }
+  .nav-btn { order: 3; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 10px; border: 1px solid #333; background: transparent; padding: 0; cursor: pointer; color: inherit; }
+  .nav-btn span, .nav-btn span::before, .nav-btn span::after { display: block; width: 1.05rem; height: 2px; border-radius: 2px; background: var(--text); position: relative; transition: transform 0.15s, background 0.15s; }
+  .nav-btn span::before, .nav-btn span::after { content: ""; position: absolute; left: 0; }
+  .nav-btn span::before { top: -6px; } .nav-btn span::after { top: 6px; }
+  .menu-open .nav-btn span { background: transparent; }
+  .menu-open .nav-btn span::before { transform: translateY(6px) rotate(45deg); }
+  .menu-open .nav-btn span::after { transform: translateY(-6px) rotate(-45deg); }
+  /* Menu: a full-screen panel sliding in from the right */
+  header.site .brand, header.site .lang-toggle, .nav-btn { position: relative; z-index: 2; }
+  header.site nav.main { position: fixed; inset: 0; z-index: 1; margin: 0; display: flex; flex-direction: column; align-items: stretch; gap: 0;
+    padding: calc(56px + 1.75rem) var(--gutter) calc(1.25rem + env(safe-area-inset-bottom)); background: rgba(16, 16, 16, 0.92);
+    overflow-y: auto; overscroll-behavior: contain;
+    transform: translateX(100%); visibility: hidden; transition: transform 0.3s cubic-bezier(.2,.8,.2,1), visibility 0s linear 0.3s; }
+  .menu-open header.site nav.main { transform: none; visibility: visible; transition: transform 0.3s cubic-bezier(.2,.8,.2,1), visibility 0s; }
+  header.site nav.main > a { display: flex; align-items: baseline; gap: 1rem; padding: 0.85rem 0.1rem; font-size: 1.6rem; font-weight: 800; letter-spacing: 0.01em; border-bottom: 1px solid #242424; color: var(--text); text-decoration: none; }
+  header.site nav.main > a i { display: inline; font: 700 0.75rem ui-monospace, "SF Mono", Menlo, monospace; color: var(--amber); font-style: normal; min-width: 1.5rem; }
+  header.site nav.main > a[aria-current] { color: var(--amber); }
+  nav.main .menu-extra { display: flex; flex-direction: column; flex: 1; padding-top: 2rem; }
+  .menu-kicker { margin: 0 0 0.75rem; color: #85807a; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; }
+  .menu-stores { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .menu-stores .store-badge img { height: 3rem; }
+  .menu-stores .store.soon { min-height: 3rem; }
+  .menu-foot { margin-top: auto; padding-top: 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .menu-legal { margin: 0; display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8rem; }
+  .menu-legal a { color: var(--muted); text-decoration: none; font-weight: 600; }
+  .menu-social { display: flex; gap: 0.5rem; }
+  .menu-social a { display: inline-grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid #333; border-radius: 50%; color: var(--text); }
+  .menu-open, .menu-open body { overflow: hidden; }
+  .menu-open body { position: fixed; left: 0; right: 0; width: 100%; }
+  .menu-open header.site { position: fixed; left: 0; right: 0; top: 0; }
+  .brand.brand-ja span { font-size: 1.15rem; }
+}
+@media (max-width: 639px) {
+  .sec { padding: 3.25rem 0; }
+  .sec-head { margin-bottom: 1.75rem; }
+  .sec-title { font-size: 1.6rem; }
+  /* Steps: smaller picture */
+  .step-card { padding: 1rem 1rem 1.25rem; }
+  .mini { height: 6.75rem; }
+  .mini-time b { font-size: 2.3rem; }
+  .step-card .step-n { margin-top: 0.9rem; }
+  /* Icon cards: icon beside the title, text below */
+  .tile { display: grid; grid-template-columns: auto 1fr; column-gap: 0.85rem; align-items: center; padding: 1.1rem 1.15rem; }
+  .tile-icon { margin: 0; width: 2.4rem; height: 2.4rem; }
+  .tile h3 { margin: 0; font-size: 1.02rem; }
+  .tile p { grid-column: 1 / -1; margin-top: 0.5rem; }
+  .tiles { gap: 0.75rem; }
+  .coverage { padding: 1.25rem; margin-top: 0.75rem; }
+  /* Support quick cards */
+  .help-cards { gap: 0.5rem; }
+  .help-card { padding: 0.75rem 0.9rem; }
+  .help-card .tile-icon { width: 2.2rem; height: 2.2rem; }
+  /* Page headers */
+  .page-head .container { padding-top: 2rem; padding-bottom: 1.75rem; }
+  .closing-card > img { height: 11rem; }
+  .founder img { width: 6rem; height: 6rem; margin: 1.4rem 1.25rem 0; }
+  .founder-body { padding: 1.1rem 1.25rem 1.4rem; }
+}
