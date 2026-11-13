@@ -26,11 +26,12 @@ html[lang="en"] .hero-title { line-height: 1.1; letter-spacing: -0.02em; }
 
 /* Timeline of tonight's notifications */
 .hero-night { min-width: 0; position: relative; width: 100%; max-width: 32rem; }
-.ex-tag { display: inline-block; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; color: #8d887f; background: #1f1f1f; padding: 0.2rem 0.55rem; border-radius: 5px; margin: 0 0 0.7rem 5.1rem; }
+.hero-night { --t: 3.5rem; --g: 1.5rem; --d: 0.7rem; }
+.ex-tag { display: inline-block; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; color: #8d887f; background: #1f1f1f; padding: 0.2rem 0.55rem; border-radius: 5px; margin: 0 0 0.7rem calc(var(--t) + var(--g)); }
 .tl { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; position: relative; }
-.tl::before { content: ""; position: absolute; left: 4.15rem; top: 1.5rem; bottom: 1.5rem; width: 2px; background: repeating-linear-gradient(#45423c 0 5px, transparent 5px 10px); }
-.tl li { display: grid; grid-template-columns: 3.5rem 1fr; gap: 1.5rem; align-items: center; position: relative; }
-.tl li::after { content: ""; position: absolute; left: 3.82rem; top: 50%; width: 0.7rem; height: 0.7rem; margin-top: -0.35rem; border-radius: 50%; background: var(--bg); border: 2px solid #6f6b64; }
+.tl::before { content: ""; position: absolute; left: calc(var(--t) + var(--g) / 2 - 1px); top: 1.5rem; bottom: 1.5rem; width: 2px; background: repeating-linear-gradient(#45423c 0 5px, transparent 5px 10px); }
+.tl li { display: grid; grid-template-columns: var(--t) 1fr; gap: var(--g); align-items: center; position: relative; }
+.tl li::after { content: ""; position: absolute; left: calc(var(--t) + var(--g) / 2 - var(--d) / 2); top: 50%; width: var(--d); height: var(--d); margin-top: calc(var(--d) / -2); border-radius: 50%; background: var(--bg); border: 2px solid #6f6b64; }
 .tl li.now::after { background: var(--amber); border-color: var(--amber); }
 .tl time { white-space: nowrap; overflow-wrap: normal; text-align: right; font: 600 1rem/1 ui-monospace, "SF Mono", Menlo, monospace; color: #8d887f; }
 .tl li.now time { color: var(--amber); font-weight: 800; }
@@ -111,10 +112,7 @@ html[lang="en"] .show-text h3 { line-height: 1.2; letter-spacing: -0.01em; }
 /* Phones: narrower time column so notifications keep to one or two lines */
 @media (max-width: 639px) {
   .home-hero .wrap { padding-top: 2rem; gap: 2rem; }
-  .ex-tag { margin-left: 3.9rem; }
-  .tl li { grid-template-columns: 2.9rem 1fr; gap: 1rem; }
-  .tl::before { left: 3.4rem; }
-  .tl li::after { left: 3.07rem; }
+  .hero-night { --t: 2.85rem; --g: 1.75rem; --d: 0.65rem; }
   .tl time { font-size: 0.85rem; }
   .note { grid-template-columns: 2.2rem 1fr; padding: 0.7rem 0.85rem; gap: 0.7rem; }
   .note img { width: 2.2rem; height: 2.2rem; }

@@ -559,7 +559,7 @@ nav.main .menu-extra { display: none; }
   /* Menu: a full-screen panel sliding in from the right */
   header.site .brand, header.site .lang-toggle, .nav-btn { position: relative; z-index: 2; }
   header.site nav.main { position: fixed; inset: 0; z-index: 1; margin: 0; display: flex; flex-direction: column; align-items: stretch; gap: 0;
-    padding: calc(56px + 1.75rem) var(--gutter) calc(1.25rem + env(safe-area-inset-bottom)); background: rgba(16, 16, 16, 0.92);
+    padding: calc(56px + 1.75rem) var(--gutter) calc(1.25rem + env(safe-area-inset-bottom)); background: #101010;
     overflow-y: auto; overscroll-behavior: contain;
     transform: translateX(100%); visibility: hidden; transition: transform 0.3s cubic-bezier(.2,.8,.2,1), visibility 0s linear 0.3s; }
   .menu-open header.site nav.main { transform: none; visibility: visible; transition: transform 0.3s cubic-bezier(.2,.8,.2,1), visibility 0s; }
