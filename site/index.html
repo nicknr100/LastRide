@@ -13,7 +13,7 @@
 <link rel="alternate" hreflang="en" href="https://lastride.jp/en/">
 <link rel="alternate" hreflang="x-default" href="https://lastride.jp/">
 <link rel="stylesheet" href="/style.css?v=14">
-<link rel="stylesheet" href="/night-home.css?v=1">
+<link rel="stylesheet" href="/night-home.css?v=2">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/favicon.png" sizes="64x64" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -35,44 +35,41 @@
 <main>
 <section class="night-hero" aria-labelledby="night-title">
   <div class="night-shell">
-    <div class="night-copy">
-      <p class="night-eyebrow">LAST TRAIN, REIMAGINED <span class="night-live">東京、夜の街</span></p>
-      <h1 class="night-title" id="night-title"><span>夜はまだ、</span><span>終わらない。</span><em>終電には、</em><span>間に合おう。</span></h1>
-      <p class="night-description">夜を楽しんでいるときに、終電の時刻を何度も気にする必要はありません。<strong>帰り時 LastRide が、今いる場所から出るべき時間</strong>を、駅までの徒歩時間と終電に合わせてお知らせします。</p>
-      <div class="actions">
-          <span class="store" aria-disabled="true" data-store-placeholder="appStore">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-            <span><small>iPhone版</small><strong>App Storeで近日公開</strong></span>
-          </span>
-          <span class="store" aria-disabled="true" data-store-placeholder="googlePlay"><span><small>Android版</small><strong>Google Playで近日公開</strong></span></span>
-          <div class="store-links" data-store-links data-lang="ja"></div>
-          <a class="btn btn-ghost" href="#features">機能を見る</a>
-        </div>
-      <p class="night-note">基本無料で使えます。Premium は14日間無料。 · iPhone版配信中</p>
-      <div class="night-proof"><div><b>01 / SET</b><span>帰り先を登録</span></div><div><b>02 / GO</b><span>夜を楽しむ</span></div><div><b>03 / LEAVE</b><span>時間に帰る</span></div></div>
-    </div>
-    <div class="night-world">
-      <div class="night-world-header"><span>◉ NEON LINE / TOKYO</span><b>東京　23:57</b><span>SCENE 001</span></div>
-      <div class="night-scene" data-night-scene data-time="night" data-paused="false">
-        <div class="city-viewport" data-city-viewport></div>
-        <div class="scene-hud">
-          <div class="scene-topline"><span class="scene-led">終電 / ナイトモード</span><span class="scene-station">渋谷 / SHIBUYA<span>2番ホーム</span></span></div>
-          <div class="scene-bottomline">
-            <div class="scene-departure"><p class="board-caption">表示時刻はイメージです</p><div class="board-time">23:57</div><p class="board-destination">出発時刻 · 終電 00:11</p><div class="board-progress"></div></div>
-            <div class="scene-controls"><button type="button" data-scene-time aria-pressed="false">☼ 夜明け</button><button type="button" data-scene-motion aria-pressed="false">Ⅱ 一時停止</button></div>
-          </div>
-        </div>
+    <div class="night-intro">
+      <div class="night-copy">
+        <p class="night-kicker">日本の終電に、間に合うためのアプリ</p>
+        <h1 id="night-title" class="night-title">終電の時刻と、<span>出発する時刻は違う。</span></h1>
       </div>
-      <div class="night-world-foot"><span>カーソルを動かして街を眺める</span><a href="#how">帰り時の使い方を見る ↗</a></div>
+      <div class="night-aside">
+        <p class="night-description">駅まで歩く時間も考えて、今いる場所から何時に出れば終電に間に合うかをお知らせ。出発前には通知やアラームで知らせます。</p>
+        <div class="night-actions">
+          <div class="night-store-row">
+            <span class="store" aria-disabled="true" data-store-placeholder="appStore">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+              <span><small>iPhone版</small><strong>App Storeで近日公開</strong></span>
+            </span>
+            <span class="store" aria-disabled="true" data-store-placeholder="googlePlay"><span><small>Android</small><strong>準備中です</strong></span></span>
+            <div class="store-links" data-store-links data-lang="ja"></div>
+          </div>
+          <a class="night-how" href="#how">使い方を見る</a>
+        </div>
+        <p class="night-note">iPhoneで基本無料。Premium は14日間無料でお試しできます。</p>
+      </div>
     </div>
+    <figure class="night-world">
+      <div class="night-scene" data-night-scene data-paused="false">
+        <div class="city-viewport" data-city-viewport></div>
+        <button class="night-motion-toggle" type="button" data-scene-motion aria-pressed="false" aria-label="アニメーションを停止">アニメーションを停止</button>
+      </div>
+      <figcaption class="night-caption"><span>東京、夜の帰り道。</span><span>イラストです · 実際の運行情報ではありません</span></figcaption>
+    </figure>
   </div>
-  <div class="night-rail-marquee" aria-hidden="true"><div><span>終電の通知 <b>✳</b></span><span>駅までの徒歩時間 <b>✳</b></span><span>夜をもう少し楽しもう <b>✳</b></span><span>終電を逃しても、次の手段を <b>✳</b></span><span>終電の通知 <b>✳</b></span><span>駅までの徒歩時間 <b>✳</b></span><span>夜をもう少し楽しもう <b>✳</b></span><span>終電を逃しても、次の手段を <b>✳</b></span></div></div>
 </section>
 
   <section class="block alt" id="how">
     <div class="container">
-      <p class="eyebrow">How it works</p>
-      <h2 class="heading"><span class="nw">使い方は、</span><span class="nw"><span class="mark">3ステップ</span>。</span></h2>
+      <p class="eyebrow">使い方</p>
+      <h2 class="heading">帰り先を登録したら、あとは出かけるだけ。</h2>
       <p class="sub">最初に帰り先を登録すれば、あとは飲み会の前にタップするだけ。</p>
       <div class="steps">
         <div class="step"><div class="num">1</div><h3>帰り先を登録</h3><p>自宅の最寄り駅（住所も設定可）を選びます。アカウント登録は不要です。</p></div>
@@ -84,8 +81,8 @@
 
   <section class="block" id="features">
     <div class="container">
-      <p class="eyebrow">Features</p>
-      <h2 class="heading"><span class="nw">終電に間に合わせる、</span><span class="nw"><span class="mark">ぜんぶ入り</span>。</span></h2>
+      <p class="eyebrow">機能</p>
+      <h2 class="heading">終電に間に合うための機能。</h2>
       <p class="sub">出発時刻のお知らせから、乗れなかったときのプランBまで。</p>
       <div class="features">
         <div class="feature">
@@ -118,7 +115,7 @@
 
   <section class="block alt" id="screens">
     <div class="container">
-      <p class="eyebrow">Screens</p>
+      <p class="eyebrow">アプリ画面</p>
       <h2 class="heading"><span class="nw">実際の<span class="mark">アプリ画面</span></span></h2>
       <p class="sub">渋谷から菊名へ帰る夜の例です。</p>
       <div class="shots">
@@ -130,7 +127,7 @@
 
   <section class="block" id="battery">
     <div class="container">
-      <p class="eyebrow">Battery</p>
+      <p class="eyebrow">バッテリー</p>
       <h2 class="heading"><span class="nw">夜通し使っても、</span><span class="nw"><span class="mark">電池にやさしい</span>。</span></h2>
       <p class="sub">終電まで見守っても、電池の減りはできるだけ少なく。</p>
       <div class="features">
@@ -164,7 +161,7 @@
 
   <section class="block alt" id="coverage">
     <div class="container">
-      <p class="eyebrow">Coverage</p>
+      <p class="eyebrow">対応路線</p>
       <h2 class="heading">首都圏の<span class="mark">終電</span>に対応</h2>
       <p class="sub">地下鉄などは公共交通オープンデータで、JR・私鉄はApple Mapsで調べます。</p>
       <ul class="chips">
@@ -176,7 +173,7 @@
 
   <section class="block" id="premium">
     <div class="container">
-      <p class="eyebrow">Pricing</p>
+      <p class="eyebrow">料金</p>
       <h2 class="heading"><span class="nw">基本は<span class="mark">無料</span>。</span><span class="nw">もっと便利にプレミアム。</span></h2>
       <p class="sub">プレミアムは14日間無料。いつでもiPhoneの設定から解約できます。</p>
       <div class="plans">
@@ -209,7 +206,7 @@
 
   <section class="block alt" id="faq">
     <div class="container">
-      <p class="eyebrow">FAQ</p>
+      <p class="eyebrow">よくある質問</p>
       <h2 class="heading">よくある質問</h2>
       <div class="faq">
         <details><summary>アカウント登録は必要ですか？</summary><p>不要です。帰り先や設定はiPhoneの中に保存され、移動履歴は残りません。</p></details>
@@ -223,9 +220,9 @@
   <section class="block">
     <div class="container">
       <div class="cta">
-        <p class="eyebrow" style="color:#8fa2b8">Download</p>
+        <p class="eyebrow">ダウンロード</p>
         <h2 class="heading"><span class="nw">帰り時を、</span><span class="nw"><span class="mark mark-dark">あなたのスマホに。</span></span></h2>
-        <p class="sub">iPhone版を配信中です。Android版は準備中です。</p>
+        <p class="sub">iPhone版を配信中です。準備中です。</p>
         <div class="actions">
           <span class="store" aria-disabled="true" data-store-placeholder="appStore">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
@@ -259,6 +256,6 @@
 </footer>
 <script src="/store-listings.js?v=3"></script>
 <script src="/store-downloads.js?v=4"></script>
-<script src="/night-scene.js?v=1" defer></script>
+<script src="/night-scene.js?v=2" defer></script>
 </body>
 </html>

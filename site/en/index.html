@@ -13,7 +13,7 @@
 <link rel="alternate" hreflang="en" href="https://lastride.jp/en/">
 <link rel="alternate" hreflang="x-default" href="https://lastride.jp/">
 <link rel="stylesheet" href="/style.css?v=14">
-<link rel="stylesheet" href="/night-home.css?v=1">
+<link rel="stylesheet" href="/night-home.css?v=2">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/favicon.png" sizes="64x64" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -35,44 +35,41 @@
 <main>
 <section class="night-hero" aria-labelledby="night-title">
   <div class="night-shell">
-    <div class="night-copy">
-      <p class="night-eyebrow">THE LAST TRAIN, REIMAGINED <span class="night-live">TOKYO AFTER DARK</span></p>
-      <h1 class="night-title" id="night-title"><span>THE NIGHT</span><span>IS YOURS.</span><em>MAKE THE</em><span>LAST TRAIN.</span></h1>
-      <p class="night-description">Stay for the conversation, not the station countdown. <strong>LastRide tells you when to leave</strong> for the last train home — factoring in your walk, with reminders before it's time to go.</p>
-      <div class="actions">
-          <span class="store" aria-disabled="true" data-store-placeholder="appStore">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
-            <span><small>For iPhone</small><strong>Coming soon to the App Store</strong></span>
-          </span>
-          <span class="store" aria-disabled="true" data-store-placeholder="googlePlay"><span><small>For Android</small><strong>Coming soon to Google Play</strong></span></span>
-          <div class="store-links" data-store-links data-lang="en"></div>
-          <a class="btn btn-ghost" href="#features">See features</a>
-        </div>
-      <p class="night-note">Free to start. Premium includes a 14-day trial. · iOS available now.</p>
-      <div class="night-proof"><div><b>01 / SET</b><span>YOUR WAY HOME</span></div><div><b>02 / GO</b><span>ENJOY THE NIGHT</span></div><div><b>03 / LEAVE</b><span>RIGHT ON TIME</span></div></div>
-    </div>
-    <div class="night-world">
-      <div class="night-world-header"><span>◉ NEON LINE / TOKYO</span><b>東京　23:57</b><span>SCENE 001</span></div>
-      <div class="night-scene" data-night-scene data-time="night" data-paused="false">
-        <div class="city-viewport" data-city-viewport></div>
-        <div class="scene-hud">
-          <div class="scene-topline"><span class="scene-led">LAST TRAIN / NIGHT MODE</span><span class="scene-station">渋谷 / SHIBUYA<span>PLATFORM 02</span></span></div>
-          <div class="scene-bottomline">
-            <div class="scene-departure"><p class="board-caption">EXAMPLE • NOT LIVE DATA</p><div class="board-time">23:57</div><p class="board-destination">LEAVE BY · LAST TRAIN 00:11</p><div class="board-progress"></div></div>
-            <div class="scene-controls"><button type="button" data-scene-time aria-pressed="false">☼ Daybreak</button><button type="button" data-scene-motion aria-pressed="false">Ⅱ Pause</button></div>
-          </div>
-        </div>
+    <div class="night-intro">
+      <div class="night-copy">
+        <p class="night-kicker">A last-train reminder for Japan</p>
+        <h1 id="night-title" class="night-title">The last train <span>isn’t your leave time.</span></h1>
       </div>
-      <div class="night-world-foot"><span>MOVE YOUR CURSOR TO LOOK AROUND</span><a href="#how">DISCOVER HOW LASTRIDE WORKS ↗</a></div>
+      <div class="night-aside">
+        <p class="night-description">There’s still the walk to the station. LastRide works back from the final train to tell you when to head out, then reminds you before it’s time to go.</p>
+        <div class="night-actions">
+          <div class="night-store-row">
+            <span class="store" aria-disabled="true" data-store-placeholder="appStore">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v14h10V4H7zm5 15.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+              <span><small>For iPhone</small><strong>Coming soon to the App Store</strong></span>
+            </span>
+            <span class="store" aria-disabled="true" data-store-placeholder="googlePlay"><span><small>Android</small><strong>Coming soon</strong></span></span>
+            <div class="store-links" data-store-links data-lang="en"></div>
+          </div>
+          <a class="night-how" href="#how">How it works</a>
+        </div>
+        <p class="night-note">Free to use on iPhone. Premium starts with a 14-day trial.</p>
+      </div>
     </div>
+    <figure class="night-world">
+      <div class="night-scene" data-night-scene data-paused="false">
+        <div class="city-viewport" data-city-viewport></div>
+        <button class="night-motion-toggle" type="button" data-scene-motion aria-pressed="false" aria-label="Pause animation">Pause animation</button>
+      </div>
+      <figcaption class="night-caption"><span>Tokyo, after dark.</span><span>Illustrated scene · not live train information</span></figcaption>
+    </figure>
   </div>
-  <div class="night-rail-marquee" aria-hidden="true"><div><span>LAST TRAIN ALERTS <b>✳</b></span><span>WALK-TO-STATION TIME <b>✳</b></span><span>STAY OUT A LITTLE LONGER <b>✳</b></span><span>IF YOU MISS IT, HAVE A PLAN B <b>✳</b></span><span>LAST TRAIN ALERTS <b>✳</b></span><span>WALK-TO-STATION TIME <b>✳</b></span><span>STAY OUT A LITTLE LONGER <b>✳</b></span><span>IF YOU MISS IT, HAVE A PLAN B <b>✳</b></span></div></div>
 </section>
 
   <section class="block alt" id="how">
     <div class="container">
       <p class="eyebrow">How it works</p>
-      <h2 class="heading"><span class="nw">Three steps.</span> <span class="nw"><span class="mark">That’s it.</span></span></h2>
+      <h2 class="heading">Set a destination. We’ll handle the timing.</h2>
       <p class="sub">Set your way home once, then tap before the night out.</p>
       <div class="steps">
         <div class="step"><div class="num">1</div><h3>Set your way home</h3><p>Pick your home station (or an address). No account needed.</p></div>
@@ -85,7 +82,7 @@
   <section class="block" id="features">
     <div class="container">
       <p class="eyebrow">Features</p>
-      <h2 class="heading"><span class="nw">Everything to make</span> <span class="nw">the <span class="mark">last train</span>.</span></h2>
+      <h2 class="heading">More than a reminder.</h2>
       <p class="sub">From the reminder to leave to a plan B if you miss it.</p>
       <div class="features">
         <div class="feature">
@@ -119,7 +116,7 @@
   <section class="block alt" id="screens">
     <div class="container">
       <p class="eyebrow">Screens</p>
-      <h2 class="heading"><span class="nw">The <span class="mark">real app</span></span></h2>
+      <h2 class="heading">What you actually see.</h2>
       <p class="sub">A night out in Shibuya, heading home to Kikuna.</p>
       <div class="shots">
         <figure class="shot"><img src="/img/en-alt.webp?v=2" width="600" height="1304" alt="The if-you-miss-it screen" loading="lazy"><figcaption><b>If you miss it</b>Compare the first train, waiting nearby and a taxi</figcaption></figure>
@@ -131,7 +128,7 @@
   <section class="block" id="battery">
     <div class="container">
       <p class="eyebrow">Battery</p>
-      <h2 class="heading"><span class="nw">All night,</span> <span class="nw"><span class="mark">easy on battery</span>.</span></h2>
+      <h2 class="heading">Location tracking, without the constant drain.</h2>
       <p class="sub">Watching the clock until the last train, using as little battery as it can.</p>
       <div class="features">
         <div class="feature">
@@ -210,7 +207,7 @@
   <section class="block alt" id="faq">
     <div class="container">
       <p class="eyebrow">FAQ</p>
-      <h2 class="heading">Questions</h2>
+      <h2 class="heading">Common questions</h2>
       <div class="faq">
         <details><summary>Do I need an account?</summary><p>No. Your destinations and settings stay on your iPhone, and no movement history is kept.</p></details>
         <details><summary>How is my location used?</summary><p>Only to find the nearest station and walking time. It’s used while the app is closed only if you choose “When closed” for night tracking.</p></details>
@@ -224,8 +221,8 @@
   <section class="block">
     <div class="container">
       <div class="cta">
-        <p class="eyebrow" style="color:#8fa2b8">Download</p>
-        <h2 class="heading"><span class="nw">Get LastRide</span> <span class="nw"><span class="mark mark-dark">on your phone.</span></span></h2>
+        <p class="eyebrow">Download</p>
+        <h2 class="heading">Get LastRide on your iPhone.</h2>
         <p class="sub">Out now on iPhone. Android is on the way.</p>
         <div class="actions">
           <span class="store" aria-disabled="true" data-store-placeholder="appStore">
@@ -260,6 +257,6 @@
 </footer>
 <script src="/store-listings.js?v=3"></script>
 <script src="/store-downloads.js?v=4"></script>
-<script src="/night-scene.js?v=1" defer></script>
+<script src="/night-scene.js?v=2" defer></script>
 </body>
 </html>
