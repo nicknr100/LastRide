@@ -24,22 +24,35 @@
     <span class="lang-toggle" role="group" aria-label="言語"><a href="#ja" lang="ja">JA</a><a href="#en" lang="en">EN</a></span>
   </div>
 </header>
-<main class="doc">
-<h1 id="ja">グループへの招待</h1>
-  <div class="card">
-    <p>帰り時（LastRide）のグループに招待されています。参加すると、今夜の帰る時間をメンバーと共有できます。</p>
-    <p><a class="btn btn-amber" id="open-app" href="last-ride://group-join">アプリで開く</a></p>
+<main>
+<div class="invite">
+  <div class="invite-card">
+    <img src="/apple-touch-icon.png" alt="" width="72" height="72">
+    <p class="sec-kicker">招待</p>
+    <h1 id="ja">グループへの招待</h1>
+    <p>帰り時（LastRide）のグループに招待されています。参加すると、今夜の出る時刻をメンバーと共有できます。</p>
+    <a class="btn btn-amber" id="open-app" href="last-ride://group-join">アプリで開く</a>
+    <ol class="invite-steps">
+      <li><span><b>アプリをお持ちでない場合</b>は、下のApp Storeから帰り時をインストールしてください（Android版は近日公開）。</span></li>
+      <li><span>インストール後、この招待リンクをもう一度開くと参加できます。</span></li>
+      <li><span>アプリで参加コードを入力しても、グループに参加できます。</span></li>
+    </ol>
     <div class="store-links" data-store-links data-lang="ja"></div>
-    <p class="muted">iPhone・Android版の配信開始後は、下のストアリンクからインストールして、この招待リンクをもう一度開いてください。グループは、アプリで参加コードを入力しても参加できます。</p>
   </div>
-
-<h2 id="en" lang="en">Join a group</h2>
-  <div class="card" lang="en">
+  <p class="invite-sep">ENGLISH</p>
+  <div class="invite-card" lang="en">
+    <p class="sec-kicker">INVITE</p>
+    <h2 id="en">Join a group</h2>
     <p>You’ve been invited to share leave times with a group on LastRide.</p>
-    <p><a class="btn btn-amber" id="open-app-en" href="last-ride://group-join">Open in the app</a></p>
+    <a class="btn btn-amber" id="open-app-en" href="last-ride://group-join">Open in the app</a>
+    <ol class="invite-steps">
+      <li><span><b>Don’t have the app?</b> Install LastRide from the App Store below (Android coming soon).</span></li>
+      <li><span>Then open this invite link again to join.</span></li>
+      <li><span>You can also join the group by entering its code in the app.</span></li>
+    </ol>
     <div class="store-links" data-store-links data-lang="en"></div>
-    <p class="muted">Once the iPhone and Android apps are published, use the store links below to install LastRide, then reopen this invitation. You can also join with the invite code in the app.</p>
   </div>
+</div>
 </main>
 <script>
   // Hand the invite on to the app (the link only reaches this page when the app isn't installed, or opened it here).

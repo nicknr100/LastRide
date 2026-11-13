@@ -26,12 +26,28 @@
     <span class="lang-toggle" role="group" aria-label="言語"><a href="/support/" lang="ja" hreflang="ja" aria-current="true">JA</a><a href="/en/support/" lang="en" hreflang="en">EN</a></span>
   </div>
 </header>
-<main class="doc">
-<h1>サポート・お問い合わせ</h1>
-
-  <p>ご質問・不具合のご報告は、下のフォームからお送りください。通常、数日以内に返信します。不具合のご報告には、iPhoneの機種・iOSのバージョン・起きた時刻と場所（駅名）を添えていただけると助かります。</p>
-
-
+<main>
+<header class="page-head">
+  <div class="container">
+    <p class="sec-kicker">サポート</p>
+    <h1>サポート・お問い合わせ</h1>
+    <p class="page-lead">ご質問・不具合のご報告は、下のフォームからお送りください。通常、数日以内に返信します。不具合のご報告には、iPhoneの機種・iOSのバージョン・起きた時刻と場所（駅名）を添えていただけると助かります。</p>
+    <div class="help-cards"><a class="help-card" href="#help"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7"/><circle cx="12" cy="17" r=".6"/></svg></span><span><b>よくある質問</b><span>まずはこちらをご確認ください</span></span></a><a class="help-card" href="#contact-form"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg></span><span><b>フォームで送る</b><span>数日以内にメールで返信します</span></span></a><a class="help-card" href="mailto:support@lastride.jp"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span><span><b>メールで送る</b><span>support@lastride.jp</span></span></a></div>
+  </div>
+</header>
+<div class="container support-grid">
+  <section id="help" aria-labelledby="help-title">
+    <h2 id="help-title">よくある質問</h2>
+    <div class="faq">
+        <details><summary>表示された時刻が実際と違います</summary><p>時刻は公共交通オープンデータセンターとApple Mapsのデータに基づく目安です。「目安」と表示された時刻は電車か徒歩かを確認できなかった推定です。駅の案内も併せてご確認のうえ、違いがあれば当方までお知らせください。鉄道事業者へのお問い合わせはお控えください。</p></details>
+        <details><summary>アプリを閉じると出る時刻が更新されません</summary><p>設定の「夜間の位置情報」で「アプリを閉じても更新」を選び、iPhoneの「設定」→「帰り時」→「位置情報」を「常に」にしてください。「アプリの使用中のみ」の場合でも、最後に計算した時刻でリマインダーは届きます。</p></details>
+        <details><summary>アラームが鳴りません</summary><p>アラームはiOS 26以降で使えます。iPhoneの「設定」→「帰り時」でアラームを許可してください。iOS 26より前のiPhoneでは、アラーム用の音の通知として届きます（マナーモード中は鳴りません）。アプリの設定にある「実際のアラームで確認」で試せます。</p></details>
+        <details><summary>サブスクリプションを解約したい</summary><p>iPhoneの「設定」→ 自分の名前 →「サブスクリプション」→「帰り時」から解約できます。アプリを削除しただけでは解約されません。返金はApple（<a href="https://reportaproblem.apple.com/">reportaproblem.apple.com</a>）からご依頼ください。</p></details>
+        <details><summary>機種変更したらプレミアムが使えません</summary><p>同じApple IDでサインインし、プレミアムの画面にある「購入を復元」をタップしてください。</p></details>
+        <details><summary>データを消したい</summary><p>アプリを削除すると、端末のデータはすべて消えます。設定の「データを消去」でも消去でき、参加中のグループからも退出します。グループのデータをすぐに消したい場合は、アプリを削除する前にグループの「…」から退出してください（削除後も、6か月間使われないと自動で消えます）。そのほかのご依頼は、<a href="#contact-form">お問い合わせフォーム</a>からご連絡ください。詳しくは<a href="/privacy/">プライバシーポリシー</a>をご覧ください。</p></details>
+    </div>
+  </section>
+  <div class="contact-col">
   <form class="contact-form" id="contact-form" data-sitekey="0x4AAAAAAFYplvzCpZxEyY_d" hidden novalidate>
     <div class="form-head">
       <h2 class="form-title">フォームで送る</h2>
@@ -57,8 +73,10 @@
     <button class="btn btn-amber form-submit" type="submit">送信する</button>
     <p class="form-status" role="status" aria-live="polite" hidden></p>
   </form>
-  <p class="muted">フォームが使えない場合は、<a href="mailto:support@lastride.jp">support@lastride.jp</a> へメールでお送りください。</p>
-  <script>
+  <p class="after-form">フォームが使えない場合は、<a href="mailto:support@lastride.jp">support@lastride.jp</a> へメールでお送りください。</p>
+  </div>
+</div>
+<script>
     // Shown only once the Turnstile site key is set; otherwise the email address below is the way to write.
     (function () {
       var form = document.getElementById("contact-form");
@@ -110,26 +128,6 @@
       });
     })();
   </script>
-
-  <h2>よくある質問</h2>
-
-  <h3>表示された時刻が実際と違います</h3>
-  <p>時刻は公共交通オープンデータセンターとApple Mapsのデータに基づく目安です。「目安」と表示された時刻は電車か徒歩かを確認できなかった推定です。駅の案内も併せてご確認のうえ、違いがあれば当方までお知らせください。鉄道事業者へのお問い合わせはお控えください。</p>
-
-  <h3>アプリを閉じると出発時刻が更新されません</h3>
-  <p>設定の「夜間の位置情報」で「アプリを閉じても更新」を選び、iPhoneの「設定」→「帰り時」→「位置情報」を「常に」にしてください。「アプリの使用中のみ」の場合でも、最後に計算した時刻でリマインダーは届きます。</p>
-
-  <h3>アラームが鳴りません</h3>
-  <p>アラームはiOS 26以降で使えます。iPhoneの「設定」→「帰り時」でアラームを許可してください。iOS 26より前のiPhoneでは、アラーム用の音の通知として届きます（マナーモード中は鳴りません）。アプリの設定にある「実際のアラームで確認」で試せます。</p>
-
-  <h3>サブスクリプションを解約したい</h3>
-  <p>iPhoneの「設定」→ 自分の名前 →「サブスクリプション」→「帰り時」から解約できます。アプリを削除しただけでは解約されません。返金はApple（<a href="https://reportaproblem.apple.com/">reportaproblem.apple.com</a>）からご依頼ください。</p>
-
-  <h3>機種変更したらプレミアムが使えません</h3>
-  <p>同じApple IDでサインインし、プレミアムの画面にある「購入を復元」をタップしてください。</p>
-
-  <h3>データを消したい</h3>
-  <p>アプリを削除すると、端末のデータはすべて消えます。設定の「データを消去」でも消去でき、参加中のグループからも退出します。グループのデータをすぐに消したい場合は、アプリを削除する前にグループの「…」から退出してください（削除後も、6か月間使われないと自動で消えます）。そのほかのご依頼は、<a href="#contact-form">お問い合わせフォーム</a>からご連絡ください。詳しくは<a href="/privacy/">プライバシーポリシー</a>をご覧ください。</p>
 </main>
 <footer class="site">
   <div class="container">

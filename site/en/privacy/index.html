@@ -26,13 +26,20 @@
     <span class="lang-toggle" role="group" aria-label="Language"><a href="/privacy/" lang="ja" hreflang="ja">JA</a><a href="/en/privacy/" lang="en" hreflang="en" aria-current="true">EN</a></span>
   </div>
 </header>
-<main class="doc">
-<h1>Privacy Policy</h1>
+<main>
+<header class="page-head">
+  <div class="container">
+    <p class="sec-kicker">LEGAL</p>
+    <h1>Privacy Policy</h1>
+    <p class="page-meta">Last updated: 4 November 2026 (using the app outside Japan; what stays after deleting the app; on 3 November: added the providers we send data to and their countries, security measures, the operator and how to make requests). If the Japanese and English versions differ, the Japanese version prevails.</p>
+    <nav class="doc-switch" aria-label="Legal documents"><a href="/en/terms/">Terms of Use</a><a href="/en/privacy/" aria-current="page">Privacy Policy</a><a href="/en/tokushoho/">Legal Notice</a></nav>
+  </div>
+</header>
+<div class="container doc-layout has-toc">
+  <nav class="toc" aria-label="Contents"><p>CONTENTS</p><ol><li><a href="#s1">Stored on your phone</a></li><li><a href="#s2">Location</a></li><li><a href="#s3">Maps and timetables</a></li><li><a href="#s4">Groups</a></li><li><a href="#s5">Premium</a></li><li><a href="#s6">Notifications, alarms and widgets</a></li><li><a href="#s7">Crash reports</a></li><li><a href="#s8">App updates</a></li><li><a href="#s9">Our server, logs and providers</a></li><li><a href="#s10">Data sent to other providers</a></li><li><a href="#s11">Your choices and contact</a></li><li><a href="#s12">How we protect data</a></li><li><a href="#s13">Using the app outside Japan</a></li><li><a href="#s14">Operator</a></li><li><a href="#s15">Children and changes</a></li></ol></nav>
+  <article class="doc-body"><p>LastRide (帰り時, “the app”) works without an account. We do not sell your data or use it for advertising.</p>
 
-  <p class="muted">Last updated: 4 November 2026 (using the app outside Japan; what stays after deleting the app; on 3 November: added the providers we send data to and their countries, security measures, the operator and how to make requests). If the Japanese and English versions differ, the Japanese version prevails.</p>
-  <p>LastRide (帰り時, “the app”) works without an account. We do not sell your data or use it for advertising.</p>
-
-  <h2>Stored on your phone</h2>
+  <h2 id="s1">Stored on your phone</h2>
   <ul>
   <li>Saved destinations: the station’s name and area, and the text of an address if you add one. Their map positions are not kept long-term; they are looked up again when needed and kept for that night only (cleared at 4:00 AM).</li>
   <li>A “tonight only” station (cleared the next day).</li>
@@ -41,31 +48,31 @@
   </ul>
   <p>The app keeps no movement history and no record of past nights.</p>
 
-  <h2>Location</h2>
+  <h2 id="s2">Location</h2>
   <p>Used to find nearby stations and walking times and to work out when to leave. Only if you choose “When closed” for night location is location used while the app is closed; tracking stops by itself after the last train (by 4:00 AM at the latest). You can switch to app-only at any time or revoke location access in iPhone Settings.</p>
 
-  <h2>Maps and timetables</h2>
+  <h2 id="s3">Maps and timetables</h2>
   <p>On iPhone, nearby stations, walking times, addresses, nearby places, taxi times, and JR and private-railway times come from Apple Maps, so your location and searches are sent to Apple under Apple’s privacy policy. Subway times are calculated by our server from Public Transportation Open Data Center data, so the departure and arrival stations (names and positions) are sent to our server. On Android, and on iPhone whenever Apple Maps doesn’t answer, your current location and searches (station names, addresses) are sent to our server instead. They are used only to answer that request, are not stored, and are never linked to you.</p>
 
-  <h2>Groups</h2>
+  <h2 id="s4">Groups</h2>
   <p>When you join a group, our server stores the group name, the display name you choose for it, whether you are the host or a member, your notification language and on/off setting, a push token, a random membership token (stored one-way), and when your app last contacted the group. On nights you choose “Join tonight”, only your leave-by time is sent; members see your display name and leave-by time. Your location, home, station and route are never shared. Leave-by times are deleted at 8:00 AM Japan time the next morning or when the host ends tonight. Leaving deletes your membership at once; disbanding a group deletes everything in it.</p>
 
-  <h2>Premium</h2>
+  <h2 id="s5">Premium</h2>
   <p>Purchases, billing and refunds are handled by Apple’s App Store; we never receive your card details. Subscription status is managed with RevenueCat under an anonymous user ID, not your name or email (RevenueCat also receives your device’s IP address when the app contacts it). When you create a group, our server checks your subscription with that ID but does not store it.</p>
 
-  <h2>Notifications, alarms and widgets</h2>
+  <h2 id="s6">Notifications, alarms and widgets</h2>
   <p>Reminders and alarms are scheduled on your phone. Widgets and the lock-screen countdown (Live Activity) show tonight’s leave time from your phone only. Group notifications are delivered through Expo’s push service and Apple’s notification service. Notifications never contain advertising.</p>
 
-  <h2>Crash reports</h2>
+  <h2 id="s7">Crash reports</h2>
   <p>To fix bugs, the app may send the error, app version, device/OS model and a random ID that tells installs apart to Sentry (Functional Software, Inc.). Reports never include your location, destinations, stations, searches or display name (they’re removed on the phone before sending), IP addresses are set not to be stored, and reports are deleted after 90 days.</p>
 
-  <h2>App updates</h2>
+  <h2 id="s8">App updates</h2>
   <p>When you open the app, it asks Expo’s servers (650 Industries, Inc.) whether a fix or update is available, sending the app version and a random ID for this install. No location or other personal data is included.</p>
 
-  <h2>Our server, logs and providers</h2>
+  <h2 id="s9">Our server, logs and providers</h2>
   <p>Train-time, station and estimate requests are answered from our own data and not stored. Server logs record the endpoint and result, not query parameters containing locations or searches. The server runs on Amazon Web Services (Tokyo); group data is stored with Neon (Singapore).</p>
 
-  <h2>Data sent to other providers</h2>
+  <h2 id="s10">Data sent to other providers</h2>
   <p>Except where required by law, we do not share personal data with third parties without consent. For the app and this website to work, these providers receive only what each feature needs:</p>
   <ul>
     <li><b>Apple Inc. (United States)</b>: your location and searches (nearby stations, walking times, addresses, nearby places, JR and private-railway times), and notification delivery</li>
@@ -80,10 +87,10 @@
 
   <p>Messages sent with the contact form on this website (your name, email address and message) reach us by email so we can reply; the form’s server doesn’t store them. Cloudflare Turnstile is used to keep out spam.</p>
 
-  <h2>Your choices and contact</h2>
+  <h2 id="s11">Your choices and contact</h2>
   <p>Deleting the app erases LastRide’s data on your phone (places, settings, tonight’s plan), except the anonymous ID that keeps your subscription and your groups (their names and access keys), which iOS keeps in the Keychain. That’s why a reinstall, or a new iPhone set up from a backup, gets Premium and your groups back by itself. To remove group data too, use “Erase data” in Settings before deleting the app. “Erase data” in Settings also erases it and leaves your groups (a host’s group is disbanded, deleting everyone’s membership). Deleting the app can’t tell our server, so group data is deleted automatically once your app hasn’t contacted the group for 6 months (30 days if notifications can no longer reach your phone); a host’s whole group is deleted. To remove it straight away, leave your groups from their “…” menu before deleting the app. For requests about the purpose of use, or to disclose, correct, delete or stop using personal data, or for any privacy question or complaint, contact <a href="mailto:support@lastride.jp">support@lastride.jp</a>. There is no fee; we may ask you to confirm it’s you.</p>
 
-  <h2>How we protect data</h2>
+  <h2 id="s12">How we protect data</h2>
   <ul>
     <li>Only the developers (the operator below and the co-developer) handle personal data, and only as far as needed.</li>
     <li>All traffic between the app, server and database is encrypted (HTTPS/TLS), and access to the server and database is limited to the developers’ accounts.</li>
@@ -91,14 +98,17 @@
     <li>Because some providers are in the United States and Singapore, we checked those countries’ systems as described above before using them.</li>
   </ul>
 
-  <h2>Using the app outside Japan</h2>
+  <h2 id="s13">Using the app outside Japan</h2>
   <p>The app is for Japan’s railways, and visitors to Japan can download it from their own country’s App Store. Wherever you use it from, this policy applies and your data is handled under Japan’s Act on the Protection of Personal Information. The providers we send data to, and their countries, are the same as above. You can ask us to disclose, correct or delete your data at the contact below, whichever country you live in.</p>
 
-  <h2>Operator</h2>
+  <h2 id="s14">Operator</h2>
   <p>Nicholas Nagai Roberts (ロバーツ ニコラスナガイ, individual), who is also responsible for handling personal data. The address is disclosed without delay on request. Contact: <a href="mailto:support@lastride.jp">support@lastride.jp</a> (see also the <a href="/en/tokushoho/">legal notice</a>).</p>
 
-  <h2>Children and changes</h2>
+  <h2 id="s15">Children and changes</h2>
   <p>The app is not directed at children under 13 and does not knowingly collect their data. Changes to this policy will be published on this page with a new date.</p>
+  <p class="doc-related">Questions? Use the <a href="/en/support/#contact-form">contact form</a> or email <a href="mailto:support@lastride.jp">support@lastride.jp</a>.</p>
+  </article>
+</div>
 </main>
 <footer class="site">
   <div class="container">

@@ -26,11 +26,28 @@
     <span class="lang-toggle" role="group" aria-label="Language"><a href="/support/" lang="ja" hreflang="ja">JA</a><a href="/en/support/" lang="en" hreflang="en" aria-current="true">EN</a></span>
   </div>
 </header>
-<main class="doc">
-<h1>Support &amp; Contact</h1>
-
-  <p>Send questions and bug reports with the form below. We usually reply within a few days. For a bug, please include your iPhone model, iOS version, and the time and place (station).</p>
-
+<main>
+<header class="page-head">
+  <div class="container">
+    <p class="sec-kicker">SUPPORT</p>
+    <h1>Support &amp; Contact</h1>
+    <p class="page-lead">Send questions and bug reports with the form below. We usually reply within a few days. For a bug, please include your iPhone model, iOS version, and the time and place (station).</p>
+    <div class="help-cards"><a class="help-card" href="#help"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7"/><circle cx="12" cy="17" r=".6"/></svg></span><span><b>Common questions</b><span>Quick answers to common issues</span></span></a><a class="help-card" href="#contact-form"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg></span><span><b>Send a message</b><span>We usually reply within a few days</span></span></a><a class="help-card" href="mailto:support@lastride.jp"><span class="tile-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span><span><b>Email us</b><span>support@lastride.jp</span></span></a></div>
+  </div>
+</header>
+<div class="container support-grid">
+  <section id="help" aria-labelledby="help-title">
+    <h2 id="help-title">Frequently asked questions</h2>
+    <div class="faq">
+        <details><summary>The times don’t match reality</summary><p>Times are estimates based on Public Transportation Open Data Center and Apple Maps data. Times marked “approx.” couldn’t be confirmed as a train. Please check station information too, and tell us about any difference — please don’t contact the rail operators.</p></details>
+        <details><summary>The leave time doesn’t update when the app is closed</summary><p>In Settings, choose “When closed” for night location, and set iPhone Settings → LastRide → Location to “Always”. With app-only, reminders still arrive based on the last calculated time.</p></details>
+        <details><summary>Alarms don’t ring</summary><p>Alarms need iOS 26 or later; allow alarms in iPhone Settings → LastRide. On earlier iOS they arrive as notifications with an alarm tone (silent in silent mode). Try “Check with a real alarm” in the app’s settings.</p></details>
+        <details><summary>Cancel the subscription</summary><p>iPhone Settings → your name → Subscriptions → LastRide. Deleting the app does not cancel it. Request refunds from Apple at <a href="https://reportaproblem.apple.com/">reportaproblem.apple.com</a>.</p></details>
+        <details><summary>Premium is missing on a new phone</summary><p>Sign in with the same Apple ID and tap “Restore purchases” on the Premium screen.</p></details>
+        <details><summary>Delete my data</summary><p>Deleting the app erases its data on your phone. “Erase data” in Settings erases it too and leaves your groups. To remove group data straight away, leave your groups from their “…” menu before deleting the app (otherwise it’s deleted automatically after 6 months unused). For anything else, use the <a href="#contact-form">contact form</a>. See the <a href="/en/privacy/">privacy policy</a>.</p></details>
+    </div>
+  </section>
+  <div class="contact-col">
   <form class="contact-form" id="contact-form" data-sitekey="0x4AAAAAAFYplvzCpZxEyY_d" hidden novalidate>
     <div class="form-head">
       <h2 class="form-title">Send a message</h2>
@@ -56,8 +73,10 @@
     <button class="btn btn-amber form-submit" type="submit">Send</button>
     <p class="form-status" role="status" aria-live="polite" hidden></p>
   </form>
-  <p class="muted">If the form doesn’t work, email <a href="mailto:support@lastride.jp">support@lastride.jp</a>.</p>
-  <script>
+  <p class="after-form">If the form doesn’t work, email <a href="mailto:support@lastride.jp">support@lastride.jp</a>.</p>
+  </div>
+</div>
+<script>
     // Shown only once the Turnstile site key is set; otherwise the email address below is the way to write.
     (function () {
       var form = document.getElementById("contact-form");
@@ -109,20 +128,6 @@
       });
     })();
   </script>
-
-  <h2>Frequently asked questions</h2>
-  <h3>The times don’t match reality</h3>
-  <p>Times are estimates based on Public Transportation Open Data Center and Apple Maps data. Times marked “approx.” couldn’t be confirmed as a train. Please check station information too, and tell us about any difference — please don’t contact the rail operators.</p>
-  <h3>The leave time doesn’t update when the app is closed</h3>
-  <p>In Settings, choose “When closed” for night location, and set iPhone Settings → LastRide → Location to “Always”. With app-only, reminders still arrive based on the last calculated time.</p>
-  <h3>Alarms don’t ring</h3>
-  <p>Alarms need iOS 26 or later; allow alarms in iPhone Settings → LastRide. On earlier iOS they arrive as notifications with an alarm tone (silent in silent mode). Try “Check with a real alarm” in the app’s settings.</p>
-  <h3>Cancel the subscription</h3>
-  <p>iPhone Settings → your name → Subscriptions → LastRide. Deleting the app does not cancel it. Request refunds from Apple at <a href="https://reportaproblem.apple.com/">reportaproblem.apple.com</a>.</p>
-  <h3>Premium is missing on a new phone</h3>
-  <p>Sign in with the same Apple ID and tap “Restore purchases” on the Premium screen.</p>
-  <h3>Delete my data</h3>
-  <p>Deleting the app erases its data on your phone. “Erase data” in Settings erases it too and leaves your groups. To remove group data straight away, leave your groups from their “…” menu before deleting the app (otherwise it’s deleted automatically after 6 months unused). For anything else, use the <a href="#contact-form">contact form</a>. See the <a href="/en/privacy/">privacy policy</a>.</p>
 </main>
 <footer class="site">
   <div class="container">
