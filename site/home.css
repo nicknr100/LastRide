@@ -20,7 +20,7 @@
 html[lang="en"] .hero-title { line-height: 1.1; letter-spacing: -0.02em; }
 .hero-title em { font-style: normal; color: var(--amber); }
 .hero-title .line { display: block; white-space: nowrap; }
-.hero-lead { word-break: auto-phrase; margin: 1.4rem 0 0; color: var(--muted); font-size: clamp(1rem, 0.95rem + 0.25vw, 1.15rem); line-height: 1.85; max-width: 32em; }
+.hero-lead { text-wrap: pretty; word-break: auto-phrase; margin: 1.4rem 0 0; color: var(--muted); font-size: clamp(1rem, 0.95rem + 0.25vw, 1.15rem); line-height: 1.85; max-width: 32em; }
 .hero-facts { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin: 1.6rem 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 0.85rem; font-weight: 700; }
 .hero-facts li::before { content: ""; display: inline-block; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--amber); margin-right: 0.45rem; vertical-align: 0.12em; }
 
