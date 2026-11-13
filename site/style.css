@@ -531,3 +531,10 @@ html[lang="en"] .page-head h1 { letter-spacing: -0.02em; line-height: 1.15; }
 /* Documents without a contents list (特商法): centre the page */
 .doc-head-center .container, .doc-layout:not(.has-toc) { max-width: 52rem; }
 .doc-layout:not(.has-toc) .doc-body { max-width: none; margin: 0 auto; width: 100%; }
+
+/* Japanese pages lead with 帰り時; LASTRIDE follows, small and amber */
+.brand.brand-ja span { color: var(--text); font-size: 1.3rem; font-weight: 800; letter-spacing: 0.02em; }
+.brand.brand-ja b { color: var(--amber); font-size: 0.66rem; letter-spacing: 0.2em; margin-top: 0.2em; }
+footer.site .brand.brand-ja span { color: var(--text); }
+/* Thin ring so the navy app icon reads as a badge on the black header and footer */
+.brand img { box-shadow: 0 0 0 1px #3a3a3a; }
