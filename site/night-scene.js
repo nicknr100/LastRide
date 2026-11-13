@@ -125,29 +125,17 @@
     petals+=`<path class="floating-petal" d="M0 0q${size} -${size*1.7} ${size*2} 0q-${size} ${size*2} -${size*2} 0" fill="${pick(["#e8a8bf","#ffcade","#f4a9bd"])}" style="--petal-x:${x}px;--petal-y:${y}px;--petal-life:${duration.toFixed(2)}s;--petal-delay:-${(rnd()*duration).toFixed(2)}s"/>`;
   }
   petalLayer.innerHTML=petals;
-  const mode=scene.querySelector("[data-scene-time]");
   const motion=scene.querySelector("[data-scene-motion]");
   function setPaused(paused){
     scene.dataset.paused=String(paused);
-    if(motion){motion.setAttribute("aria-pressed",String(paused));motion.textContent=paused?(ja?"▶ 再生":"▶ Resume"):(ja?"Ⅱ 一時停止":"Ⅱ Pause");}
+    if(motion){
+      motion.setAttribute("aria-pressed",String(paused));
+      const label=paused?(ja?"アニメーションを再生":"Play animation"):(ja?"アニメーションを停止":"Pause animation");
+      motion.textContent=label;
+      motion.setAttribute("aria-label",label);
+    }
   }
   setPaused(reduce.matches);
   motion?.addEventListener("click",()=>setPaused(scene.dataset.paused!=="true"));
-  mode?.addEventListener("click",()=>{
-    const day=scene.dataset.time!=="day";
-    scene.dataset.time=day?"day":"night";
-    mode.setAttribute("aria-pressed",String(day));
-    mode.textContent=day?(ja?"☾ 夜に戻す":"☾ After dark"):(ja?"☼ 夜明け":"☼ Daybreak");
-  });
-  let raf=0,x=0,y=0;
-  const draw=()=>{raf=0;scene.style.setProperty("--look-x",`${(x*11).toFixed(1)}px`);scene.style.setProperty("--look-y",`${(y*8).toFixed(1)}px`);};
-  scene.addEventListener("pointermove",(event)=>{
-    if(reduce.matches||event.pointerType==="touch")return;
-    const bounds=scene.getBoundingClientRect();
-    x=Math.max(-1,Math.min(1,(event.clientX-bounds.left)/bounds.width*2-1));
-    y=Math.max(-1,Math.min(1,(event.clientY-bounds.top)/bounds.height*2-1));
-    if(!raf)raf=requestAnimationFrame(draw);
-  },{passive:true});
-  scene.addEventListener("pointerleave",()=>{x=0;y=0;if(!raf)raf=requestAnimationFrame(draw);});
   reduce.addEventListener?.("change",(event)=>setPaused(event.matches));
 })();
