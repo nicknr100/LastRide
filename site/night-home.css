@@ -465,3 +465,56 @@ body.night-landing footer.site .f-data { color: #bbc5d0; }
     transition: none !important;
   }
 }
+
+/*
+ * First-screen desktop composition.
+ * Let the illustrated scene occupy the space remaining below the actual
+ * headline/actions, rather than enforcing a 460-570px illustration height.
+ * This keeps the entire scene frame (including caption) inside the first
+ * viewport on common laptop and desktop displays. Mobile stays content-first.
+ */
+@media (min-width: 901px) and (min-height: 650px) {
+  .night-shell {
+    height: calc(100svh - 66px);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding-top: clamp(20px, 3svh, 30px);
+    padding-bottom: clamp(12px, 2svh, 18px);
+  }
+  .night-intro {
+    flex: 0 0 auto;
+    align-items: center;
+    margin-bottom: clamp(12px, 2svh, 20px);
+  }
+  .night-kicker { margin-bottom: 12px; }
+  .night-title {
+    font-size: clamp(44px, min(5vw, 8svh), 72px);
+  }
+  html[lang="ja"] .night-title {
+    font-size: clamp(39px, min(4.5vw, 7svh), 62px);
+  }
+  .night-description {
+    font-size: clamp(15px, 1.12vw, 18px);
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+  .night-actions { gap: 8px; }
+  .night-note { margin-top: 8px; }
+  .night-world {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .night-scene {
+    flex: 1 1 auto;
+    height: 0;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+  .night-caption {
+    flex: 0 0 auto;
+    margin-top: 8px;
+  }
+}
