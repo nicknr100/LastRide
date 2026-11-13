@@ -50,6 +50,10 @@ import type { NightPlan } from '@/lib/planner';
 import { shareForegroundPlan, readTrackingSnapshot } from '@/lib/tracking';
 import { MINUTE_MS } from '@/lib/time';
 
+// A fixed evening (21:00 in Tokyo): with the real clock, runs after about 01:00 found tonight's
+// plans already over and failed (CI on 2026-11-13 at 01:35 JST).
+vi.useFakeTimers({ toFake: ['Date'] });
+vi.setSystemTime(new Date('2026-11-13T21:00:00+09:00'));
 const NOW = Date.now();
 const home = { name: 'Kikuna', nameJa: '菊名', latitude: 35.51, longitude: 139.63 };
 const station = (name: string, nameJa: string) => ({ name, nameJa, latitude: 35.7, longitude: 139.7 });
