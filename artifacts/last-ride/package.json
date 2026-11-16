@@ -14,7 +14,7 @@
     "bundle:ci": "expo export --platform all --output-dir .ci-export --clear"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2",
+    "@babel/core": "^7.29.13",
     "@expo/ngrok": "^4.1.0",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -55,7 +55,7 @@
     "typescript": "~6.0.3",
     "vite": "catalog:",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^5.0.5",
+    "vitest": "^5.1.0",
     "zod": "catalog:"
   },
   "dependencies": {
