@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as Notifications from 'expo-notifications';
 
 const mocks = vi.hoisted(() => {
   const store = new Map<string, string>();
@@ -457,5 +458,24 @@ describe('reminder delivery', () => {
     await scheduleReminders([plans[0], { ...plans[1], fireAt: now + 960_000 }], text);
     expect(mocks.alarmCancel).toHaveBeenCalledOnce();
     expect(mocks.alarmSchedule).toHaveBeenCalledOnce();
+  });
+  it('with notifications off in iOS Settings, skips them without an error, still sets alarms, and doesn\u2019t redo it on every re-plan', async () => {
+    const permissions = vi.mocked(Notifications.getPermissionsAsync);
+    permissions.mockResolvedValue({ granted: false, status: 'denied' } as never);
+    // iOS would refuse with UNErrorDomain 2003 "Source is not authorized" (Sentry, 1.0 build 15).
+    try {
+      const now = Date.now();
+      const plans = [{ minutesBefore: 15, fireAt: now + 120_000 }, { minutesBefore: 0, fireAt: now + 900_000, alarm: true as const }];
+      await expect(scheduleReminders(plans, text)).resolves.toBeUndefined();
+      expect(mocks.notificationSchedule).not.toHaveBeenCalled();
+      expect(mocks.alarmSchedule).toHaveBeenCalledOnce();
+      mocks.alarmCancel.mockClear();
+      mocks.alarmSchedule.mockClear();
+      await scheduleReminders(plans, text);
+      expect(mocks.alarmCancel).not.toHaveBeenCalled();
+      expect(mocks.alarmSchedule).not.toHaveBeenCalled();
+    } finally {
+      permissions.mockResolvedValue({ granted: true } as never);
+    }
   });
 });

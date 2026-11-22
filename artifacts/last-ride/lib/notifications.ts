@@ -77,10 +77,22 @@ async function appendNativeAlarm(alarm: NativeAlarmReceipt): Promise<void> {
 
 /** Only consult the OS if the exact plan signature already matches. Reading
  * native state on every replan would waste battery in background tracking. */
-async function nativeSchedulePresent(plans: ReminderPlan[], hasHeld: boolean): Promise<boolean> {
+async function nativeSchedulePresent(plans: ReminderPlan[], hasHeld: boolean, notificationsAllowed = true): Promise<boolean> {
   const now = Date.now();
   const expected = plans.filter((plan) => plan.fireAt > now + 1000 && (!plan.boardedCheck || hasHeld)).length;
   if (expected === 0) return true;
+  if (!notificationsAllowed) {
+    // Notifications off in iOS Settings: none can be queued, so only the
+    // AlarmKit alarms (allowed separately) can be checked.
+    try {
+      const savedAlarms = (await readNativeAlarms()).filter((entry) => entry.fireAt > now + 1000);
+      if (savedAlarms.length === 0) return true;
+      const nativeIds = await alarmKit.scheduledIds();
+      return nativeIds !== null && savedAlarms.every((entry) => nativeIds.includes(entry.id));
+    } catch {
+      return false;
+    }
+  }
   try {
     const [persisted, scheduled] = await Promise.all([
       readScheduledEntries(), Notifications.getAllScheduledNotificationsAsync(),
@@ -227,7 +239,13 @@ async function present(
   // If a background task is killed between OS scheduling and storage, the next
   // run can still enumerate and cancel orphaned alerts belonging to LastRide.
   const identifier = extra.identifier ?? `lastride-local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const id = await Notifications.scheduleNotificationAsync({
+  // Notifications turned off in iOS Settings: iOS refuses every schedule
+  // (UNErrorDomain 2003). Skip quietly; AlarmKit alarms are allowed separately
+  // and the app shows its own "notifications are off" notice.
+  if (!(await Notifications.getPermissionsAsync().then((p) => p.granted, () => true))) return;
+  let id: string;
+  try {
+    id = await Notifications.scheduleNotificationAsync({
     identifier,
     // timeSensitive lets the alert break through Focus modes once the app has the
     // Time Sensitive Notifications entitlement. On iOS, vibration follows the
@@ -249,7 +267,13 @@ async function present(
             date: new Date(Date.now() + delayMs),
             channelId: vibrate ? 'leave-reminders' : 'leave-reminders-no-vibrate',
           },
-  });
+    });
+  } catch (error) {
+    // Turned off between the check and the schedule: same as above. Anything
+    // else is a real failure and still reaches the caller.
+    if ((await Notifications.getPermissionsAsync().then((p) => p.granted, () => true))) throw error;
+    return;
+  }
   const ids = await readOwnedIds();
   if (!ids.includes(id)) ids.push(id);
   await writeOwnedIds(ids);
@@ -525,6 +549,10 @@ export function scheduleReminders(
   return enqueue(async (control) => {
     const now = Date.now();
     const alarmAuthorization = plans.some((plan) => plan.alarm) && alarmKitAvailable ? await alarmKit.status().catch(() => 'denied') : 'unsupported';
+    // Off in iOS Settings: nothing can be queued (present() skips), so the
+    // schedule mustn't be redone on every re-plan for want of notifications.
+    const notificationsAllowed = Platform.OS === 'web' ||
+      await Notifications.getPermissionsAsync().then((p) => p.granted, () => true);
     // Leave-reminder notifications go SCREEN_OFF_DELAY_MS early on iOS. Shifted here,
     // before the record decides, so "sent" means sent: a re-plan in those seconds
     // mustn't think 出る時間です is still to come and send it again. AlarmKit alarms
@@ -542,11 +570,11 @@ export function scheduleReminders(
     // Permission can change in iOS Settings without the plans changing; a schedule
     // made of stand-in notifications must be replaced once alarms are allowed.
     const signature = JSON.stringify([
-      SCHEDULER_VERSION, upcoming, text, sound, vibrate, throughFocus, alarmAuthorization,
+      SCHEDULER_VERSION, upcoming, text, sound, vibrate, throughFocus, alarmAuthorization, notificationsAllowed,
       decided && [decided.catchUp, decided.stationChanged, decided.timeShifted, decided.followUp, decided.ledger.sent, decided.ledger.stationKey],
     ]);
     if (Platform.OS !== 'web' && (await AsyncStorage.getItem(SIGNATURE_KEY).catch(() => null)) === signature &&
-        await nativeSchedulePresent(upcoming, !!text.held)) return;
+        await nativeSchedulePresent(upcoming, !!text.held, notificationsAllowed)) return;
     let alarmReceiptsIntact = true;
     // Only what changed is replaced: reminders still the same stay queued untouched
     // (see reminderId); the rest are removed once the new set is in. AlarmKit can
